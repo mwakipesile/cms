@@ -1,0 +1,3 @@
+about.txt
+changes.txt
+history.txt
