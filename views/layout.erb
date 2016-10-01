@@ -1,4 +1,5 @@
-<% if @flash_message[:not_found] %>
-  <%= @flash_message.delete[:not_found] %>
+<% if session[:message] %>
+  <%= session.delete(:message) %>
 <% end %>
-<%= yield %>
+
+<%== yield %>
