@@ -20,12 +20,6 @@ class CmsTest < Minitest::Test
     FileUtils.rm_rf(data_path)
   end
 
-  def create_document(name, content = "")
-    File.open(File.join(data_path, name), "w") do |file|
-      file.write(content)
-    end
-  end
-
   def test_index
     get "/"
     create_document "about.md"
@@ -124,24 +118,25 @@ class CmsTest < Minitest::Test
     assert_equal 200, last_response.status
     assert_includes last_response.body, "New Document"
     assert_includes last_response.body, "/new"
-    skip
+
     get '/new'
     assert_equal 200, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
     assert_includes last_response.body, "form"
     assert_includes last_response.body, "fieldset"
     assert_includes last_response.body, "input"
+    assert_includes last_response.body, "<label for='document_name'>Add new document:</label>"
   end
 
   def test_save_new_file
-    skip
-    post '/files/new', filename: "README.md"
+    post '/files/new', document_name: "README.md"
     assert_equal 302, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
 
     get last_response["Location"]
 
     assert_equal 200, last_response.status
+    assert_includes last_response.body, "README.md was created"
     assert_includes last_response.body, "README.md"
 
     get '/README.md'

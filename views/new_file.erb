@@ -1,0 +1,18 @@
+<form action='/files/new' method='post'>
+  <dl>
+    <dt>
+      <label for='document_name'>Add new document:</label>
+    </dt>
+    <dd>
+      <input name='document_name' placeholder='Document name' type='text' value=''>
+    </dd>
+  </dl>
+  <fieldset class='actions'>
+    <input type='submit' value='Create'>
+    <a href='/'>Cancel</a>
+  </fieldset>
+</form>
+
+  <% content_for :header_link do %>
+    <a class='documents' href='/'>All Documents</a>
+  <% end %>

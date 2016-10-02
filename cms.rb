@@ -4,6 +4,12 @@ require 'sinatra/content_for'
 require 'tilt/erubis'
 require 'redcarpet'
 
+configure do
+  enable :sessions
+  set :session_secret, 'password1'
+  set :erb, :escape_html => true
+end
+
 def data_path
   if ENV["RACK_ENV"] == "test"
     File.expand_path("../test/data", __FILE__)
@@ -12,10 +18,10 @@ def data_path
   end
 end
 
-configure do
-  enable :sessions
-  set :session_secret, 'password1'
-  set :erb, :escape_html => true
+def create_document(name, content = "")
+  File.open(File.join(data_path, name), "w") do |file|
+    file.write(content)
+  end
 end
 
 before do
@@ -81,3 +87,11 @@ end
 get '/new' do
   erb :new_file
 end
+
+post '/files/new' do
+  filename = params[:document_name]
+  create_document(filename)
+  session[:message] = "#{filename} was created"
+  redirect('/')
+end
+
