@@ -4,13 +4,19 @@ require 'sinatra/content_for'
 require 'tilt/erubis'
 require 'redcarpet'
 
+def data_path
+  if ENV["RACK_ENV"] == "test"
+    File.expand_path("../test/data", __FILE__)
+  else
+    File.expand_path("../data", __FILE__)
+  end
+end
+
 configure do
   enable :sessions
   set :session_secret, 'password1'
   set :erb, :escape_html => true
 end
-
-root = File.expand_path("..", __FILE__)
 
 before do
   headers["Content-Type"] = "text/html;charset=utf-8"
@@ -29,13 +35,14 @@ helpers do
       headers["Content-Type"] = "text/plain"
       content
     when ".md"
-      render_markdown(content)
+      @content = render_markdown(content)
+      erb :file
     end
   end
 end
 
 get "/" do
-  @filenames = Dir.glob(root + "/data/*").map do |path|
+  @filenames = Dir.glob(File.join(data_path, "*")).map do |path|
     File.basename(path)
   end
 
@@ -44,14 +51,14 @@ end
 
 get '/:filename/edit' do |filename|
   @filename = filename
-  @file_content = load_file_content("#{root}/data/#{filename}")
+  @file_content = File.read(File.join(data_path, filename))
   headers["Content-Type"] = "text/html;charset=utf-8"
 
   erb :edit_file
 end
 
 get "/*.*" do |filename, ext|
-  filepath = "#{root}/data/#{filename}.#{ext}"
+  filepath = "#{data_path}/#{filename}.#{ext}"
 
   if File.exist?(filepath)
     load_file_content(filepath)
@@ -62,9 +69,15 @@ get "/*.*" do |filename, ext|
 end
 
 post '/:filename' do |filename|
-  filepath = "#{root}/data/#{filename}"
+  filepath = File.join(data_path, filename)
   text = params[:file_content]
+
   File.open(filepath, "w") { |file| file.write(text) }
 
-  redirect("/#{filename}")
+  session[:message] = "#{filename} has been updated!"
+  redirect("/")
+end
+
+get '/new' do
+  erb :new_file
 end

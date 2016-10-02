@@ -1,5 +1,27 @@
-<% if session[:message] %>
-  <%= session.delete(:message) %>
-<% end %>
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <title>CMS</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=PT+Sans">
+    <link rel="stylesheet" href="/css/whitespace-reset.css">
+    <link rel="stylesheet" href="/css/application.css">
+    <script src="/js/jquery-3.1.1.js"></script>
+    <script src="/js/application.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1><a href='/'>CMS</a></h1>
+      <div class='actions'><%== yield_content :header_link %></div>
+    </header>
 
-<%== yield %>
+    <main>
+      <% if session[:message] %>
+        <div class='flash message'>
+          <%= session.delete(:message) %>
+        </div>
+      <% end %>
+
+      <%== yield %>
+    </main>
+  </body>

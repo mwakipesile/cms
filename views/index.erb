@@ -1,8 +1,12 @@
-<ul>
+<ul id="files">
   <% @filenames.each do |filename| %>
     <li>
-      <a href='/<%= filename %>'><%= filename %></a>
-      <p class='edit'><a href='/<%= filename %>/edit'>Edit</a></p>
+      <a class="file" href='/<%= filename %>'><%= filename %></a>
+      <span><a class='edit' href='/<%= filename %>/edit'>Edit</a></span>
     </li>
   <% end %>
 </ul>
+
+<% content_for :header_link do %>
+  <a class='add' href='/new'>New Document</a>
+<% end %>
