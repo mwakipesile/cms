@@ -96,7 +96,7 @@ post '/files/create' do
   if !filename.match(/\w+\.\w{2,}/)
     session[:message] = 'A valid name is required'
   elsif file_list.include?(filename)
-    session[:message] = 'A document with name #{filename} already exists'
+    session[:message] = "A document with name #{filename} already exists"
   else
     create_document(filename)
     session[:message] = "#{filename} was created"
@@ -105,4 +105,15 @@ post '/files/create' do
 
   status(422)
   erb :new_file
+end
+
+post '/files/delete/:filename' do |filename|
+  if !file_list.include?(filename)
+    session[:message] = "File with name #{filename} doesn't exist"
+  else
+    File.delete(File.join(data_path, filename))
+    session[:message] = "#{filename} has been deleted"
+  end
+
+  redirect('/')
 end

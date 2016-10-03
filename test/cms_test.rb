@@ -180,4 +180,25 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "input"
     assert_includes last_response.body, "<label for='document_name'>Add new document:</label>"
   end
+
+  def test_delete_file
+    post '/files/create', document_name: "mydoc.txt"
+    post '/files/create', document_name: "mydoc.md"
+
+    get "/"
+    assert_includes last_response.body, "mydoc.txt"
+    assert_includes last_response.body, "mydoc.md"
+
+    post '/files/delete/mydoc.txt'
+    assert_equal 302, last_response.status
+
+    get last_response["Location"]
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "mydoc.txt has been deleted"
+
+    get '/'
+    refute_includes last_response.body, "mydoc.txt"
+    assert_includes last_response.body, "mydoc.md"
+  end
 end
