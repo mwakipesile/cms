@@ -129,7 +129,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_save_new_file
-    post '/files/new', document_name: "README.md"
+    post '/files/create', document_name: "README.md"
     assert_equal 302, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
 
@@ -137,10 +137,47 @@ class CmsTest < Minitest::Test
 
     assert_equal 200, last_response.status
     assert_includes last_response.body, "README.md was created"
-    assert_includes last_response.body, "README.md"
 
     get '/README.md'
     assert_equal 200, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
+
+    get "/"
+    assert_includes last_response.body, "README.md"
+  end
+
+  def test_reject_blank_filename
+    post '/files/create', document_name: ""
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'A valid name is required'
+    assert_includes last_response.body, "form"
+    assert_includes last_response.body, "fieldset"
+    assert_includes last_response.body, "input"
+    assert_includes last_response.body, "<label for='document_name'>Add new document:</label>"
+  end
+
+  def test_reject_filename_missing_extension
+    post '/files/create', document_name: "mydoc"
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'A valid name is required'
+    assert_includes last_response.body, "form"
+    assert_includes last_response.body, "fieldset"
+    assert_includes last_response.body, "input"
+    assert_includes last_response.body, "<label for='document_name'>Add new document:</label>"
+  end
+
+  def test_reject_duplicate_filename
+    post '/files/create', document_name: "mydoc.txt"
+
+    get "/"
+    assert_includes last_response.body, "mydoc.txt"
+
+    post '/files/create', document_name: "mydoc.txt"
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "mydoc.txt already exists"
+    assert_includes last_response.body, "form"
+    assert_includes last_response.body, "fieldset"
+    assert_includes last_response.body, "input"
+    assert_includes last_response.body, "<label for='document_name'>Add new document:</label>"
   end
 end

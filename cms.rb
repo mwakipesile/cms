@@ -29,6 +29,10 @@ before do
 end
 
 helpers do
+  def file_list
+    Dir.glob(File.join(data_path, "*")).map { |path| File.basename(path) }
+  end
+
   def render_markdown(text)
     markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
     markdown.render(text)
@@ -48,9 +52,7 @@ helpers do
 end
 
 get "/" do
-  @filenames = Dir.glob(File.join(data_path, "*")).map do |path|
-    File.basename(path)
-  end
+  @filenames = file_list
 
   erb :index
 end
@@ -88,10 +90,20 @@ get '/new' do
   erb :new_file
 end
 
-post '/files/new' do
+post '/files/create' do
   filename = params[:document_name]
-  create_document(filename)
-  session[:message] = "#{filename} was created"
-  redirect('/')
+
+  if !filename.match(/\w+\.\w{2,}/)
+    session[:message] = 'A valid name is required'
+  elsif file_list.include?(filename)
+    session[:message] = "A document with name #{filename} already exists"
+  else
+    create_document(filename)
+    session[:message] = "#{filename} was created"
+    redirect('/')    
+  end
+
+  status(422)
+  erb :new_file
 end
 
