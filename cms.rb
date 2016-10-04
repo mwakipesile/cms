@@ -98,21 +98,21 @@ post '/files/delete/:filename' do |filename|
   redirect('/')
 end
 
-get '/signin' do
+get '/users/signin' do
   erb :signin
 end
 
-post '/signin' do
+post '/users/signin' do
   username = params[:username]
   password = params[:password]
 
   session[:auth].each do |hash|
     next unless hash[:username] == username
-    session[:signed_in_user] = username if hash[:password] == password
+    session[:username] = username if hash[:password] == password
     break
   end
 
-  if session[:signed_in_user]
+  if session[:username]
     session[:message] = 'Welcome!'
     redirect('/')
   else
@@ -121,8 +121,8 @@ post '/signin' do
   end
 end
 
-post '/signout' do
-  session[:message] = "Goodbye #{session.delete(:signed_in_user)}"
+post '/users/signout' do
+  session[:message] = "Goodbye #{session.delete(:username)}"
   redirect('/')
 end
 

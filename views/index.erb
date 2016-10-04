@@ -12,12 +12,12 @@
 
 <% content_for :header_link do %>
   <a class='add' href='/new'>New Document</a>
-  <% if session[:signed_in_user] %>
-    Signed in as <%= session[:signed_in_user] %>
-    <form action='/signout' method='post' class='signout'>
+  <% if session[:username] %>
+    Signed in as <%= session[:username] %>
+    <form action='/users/signout' method='post' class='signout'>
       <button type='submit'>Sign Out</button>
     </form> 
   <% else %>
-    <a class='signin' href='/signin'>Sign In</a>
+    <a class='signin' href='/users/signin'>Sign In</a>
   <% end %>
 <% end %>

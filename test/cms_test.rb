@@ -20,6 +20,14 @@ class CmsTest < Minitest::Test
     FileUtils.rm_rf(data_path)
   end
 
+  def session
+    last_request.env["rack.session"]
+  end
+
+  def admin_session
+    { 'rack.session' => { username: 'admin' } }
+  end
+
   def test_index
     get "/"
     create_document "about.md"
@@ -47,12 +55,12 @@ class CmsTest < Minitest::Test
     create_document "ruby_releases.txt"
     create_document "about.md"
     assert_equal 302, last_response.status
+    assert_equal "nonexistent.txt does not exist.", session[:message]
     
     get last_response["Location"]
 
     assert_equal 200, last_response.status
-    assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
-    assert_includes last_response.body, "nonexistent.txt does not exist"
+    assert_equal "text/html;charset=utf-8", last_response.[]("Content-Type")
     assert_includes last_response.body, "doc_list.txt"
     assert_includes last_response.body, "ruby_releases.txt"
     assert_includes last_response.body, "about.md"
@@ -134,7 +142,6 @@ class CmsTest < Minitest::Test
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
 
     get last_response["Location"]
-
     assert_equal 200, last_response.status
     assert_includes last_response.body, "README.md was created"
 
@@ -193,7 +200,6 @@ class CmsTest < Minitest::Test
     assert_equal 302, last_response.status
 
     get last_response["Location"]
-
     assert_equal 200, last_response.status
     assert_includes last_response.body, "mydoc.txt has been deleted"
 
@@ -203,35 +209,55 @@ class CmsTest < Minitest::Test
   end
 
   def test_sign_in_page
-    get '/signin'
+    get '/users/signin'
     assert_equal 200, last_response.status
-    assert_includes last_response.body, "<form action='/signin"
+    assert_includes last_response.body, "<form action='/users/signin"
     assert_includes last_response.body, "method='post'"
     assert_includes last_response.body, "<label for='password'"
     assert_includes last_response.body, "<input type='submit'"
   end
 
   def test_signin_with_wrong_credentials
-    post '/signin'
+    post '/users/signin', username: 'admin', password: 'papaya'
     assert_equal 200, last_response.status
     assert_includes last_response.body, 'Wrong credentials'
-    assert_includes last_response.body, "<form action='/signin"
+    assert_includes last_response.body, "<form action='/users/signin"
     assert_includes last_response.body, "method='post'"
     assert_includes last_response.body, "<label for='password'"
     assert_includes last_response.body, "<input type='submit'"
   end
 
   def test_successful_signin
-    post '/signin', username: 'admin', password: 'secret'
+    post '/users/signin', username: 'admin', password: 'secret'
+    assert_equal 302, last_response.status
+    assert_equal "Welcome!", session[:message]
+
+    get last_response["Location"]
+    assert_equal "admin", session[:username]
+    assert_equal 200, last_response.status
+    refute_includes last_response.body, "<form action='/users/signin"
+    assert_includes last_response.body, "Signed in as admin"
+    assert_includes last_response.body, "<form action='/users/signout'"
+    assert_includes last_response.body, "method='post'"
+    refute_includes last_response.body, "<label for='password'"
+  end
+
+  def test_signout
+    get '/', {}, admin_session
+    assert_equal 200, last_response.status
+    assert_equal 'admin', session[:username]
+    refute_includes last_response.body, "<form action='/users/signin"
+    assert_includes last_response.body, "Signed in as admin"
+
+    post '/users/signout'
     assert_equal 302, last_response.status
 
     get last_response["Location"]
     assert_equal 200, last_response.status
-    refute_includes last_response.body, "<form action='/signin"
-    assert_includes last_response.body, "Welcome"
-    assert_includes last_response.body, "Signed in as admin"
-    assert_includes last_response.body, "<form action='/signout'"
-    assert_includes last_response.body, "method='post'"
-    refute_includes last_response.body, "<label for='password'"
+    assert_equal nil, session[:username]
+    assert_includes last_response.body, "Goodbye admin"
+    assert_includes last_response.body, "href='/users/signin'>Sign In"
+    refute_includes last_response.body, "Signed in as admin"
+    refute_includes last_response.body, "<form action='/users/signout'"
   end
 end

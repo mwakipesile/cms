@@ -1,10 +1,10 @@
-<form action='/signin' method='post'>
+<form action='/users/signin' method='post'>
   <dl>
     <dt>
       <label for='username'>Username:</label>
     </dt>
     <dd>
-      <input name='username' placeholder='Username' type='text' value=''>
+      <input name='username' placeholder='Username' type='text' value='<%= params[:username] %>'>
     </dd>
   </dl>
   <dl>
