@@ -201,4 +201,34 @@ class CmsTest < Minitest::Test
     refute_includes last_response.body, "mydoc.txt"
     assert_includes last_response.body, "mydoc.md"
   end
+
+  def test_sign_in_page
+    get '/signin'
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "<form action='/signin"
+    assert_includes last_response.body, "method='post'"
+    assert_includes last_response.body, "<label for='password'"
+    assert_includes last_response.body, "<input type='submit'"
+  end
+
+  def test_signin_in
+    post '/signin'
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'Wrong credentials'
+    assert_includes last_response.body, "<form action='/signin"
+    assert_includes last_response.body, "method='post'"
+    assert_includes last_response.body, "<label for='password'"
+    assert_includes last_response.body, "<input type='submit'"
+
+    post '/signin', username: 'admin', password: 'secret'
+    assert_equal 302, last_response.status
+
+    get last_response["Location"]
+    assert_equal 200, last_response.status
+    refute_includes last_response.body, "<form action='/signin"
+    assert_includes last_response.body, "Welcome"
+    assert_includes last_response.body, "<form action='/signout'"
+    assert_includes last_response.body, "method='post'"
+    refute_includes last_response.body, "<label for='password'"
+  end
 end

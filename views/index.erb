@@ -3,8 +3,8 @@
     <li>
       <a class="file" href='/<%= filename %>'><%= filename %></a>
       <span><a class='edit' href='/<%= filename %>/edit'>Edit</a></span>
-      <form action='files/delete/<%= filename %>' method="post" class="delete">
-        <button type="submit">Delete</button>
+      <form action='files/delete/<%= filename %>' method='post' class='delete'>
+        <button type='submit'>Delete</button>
       </form>      
     </li>
   <% end %>
@@ -12,4 +12,12 @@
 
 <% content_for :header_link do %>
   <a class='add' href='/new'>New Document</a>
+  <% if session[:signed_in_user] %>
+    Signed in as <%= session[:signed_in_user] %>
+    <form action='/signout' method='post' class='signout'>
+      <button type='submit'>Sign Out</button>
+    </form> 
+  <% else %>
+    <a class='signin' href='/signin'>Sign In</a>
+  <% end %>
 <% end %>

@@ -26,6 +26,7 @@ end
 
 before do
   headers['Content-Type'] = 'text/html;charset=utf-8'
+  session[:auth] = [{username: 'admin', password: 'secret'}]
 end
 
 helpers do
@@ -65,27 +66,6 @@ get '/:filename/edit' do |filename|
   erb :edit_file
 end
 
-get '/*.*' do |filename, ext|
-  filepath = "#{data_path}/#{filename}.#{ext}"
-
-  if File.exist?(filepath)
-    load_file_content(filepath)
-  else
-    session[:message] = "#{filename}.#{ext} does not exist."
-    redirect('/')
-  end
-end
-
-post '/:filename' do |filename|
-  filepath = File.join(data_path, filename)
-  text = params[:file_content]
-
-  File.open(filepath, 'w') { |file| file.write(text) }
-
-  session[:message] = "#{filename} has been updated!"
-  redirect('/')
-end
-
 get '/new' do
   erb :new_file
 end
@@ -115,5 +95,54 @@ post '/files/delete/:filename' do |filename|
     session[:message] = "#{filename} has been deleted"
   end
 
+  redirect('/')
+end
+
+get '/signin' do
+  erb :signin
+end
+
+post '/signin' do
+  username = params[:username]
+  password = params[:password]
+
+  session[:auth].each do |hash|
+    next unless hash[:username] == username
+    session[:signed_in_user] = username if hash[:password] == password
+    break
+  end
+
+  if session[:signed_in_user]
+    session[:message] = 'Welcome!'
+    redirect('/')
+  else
+    session[:message] = 'Wrong credentials'
+    erb :signin
+  end
+end
+
+post '/signout' do
+  session[:message] = "Goodbye #{session.delete(:signed_in_user)}"
+  redirect('/')
+end
+
+get '/*.*' do |filename, ext|
+  filepath = "#{data_path}/#{filename}.#{ext}"
+
+  if File.exist?(filepath)
+    load_file_content(filepath)
+  else
+    session[:message] = "#{filename}.#{ext} does not exist."
+    redirect('/')
+  end
+end
+
+post '/:filename' do |filename|
+  filepath = File.join(data_path, filename)
+  text = params[:file_content]
+
+  File.open(filepath, 'w') { |file| file.write(text) }
+
+  session[:message] = "#{filename} has been updated!"
   redirect('/')
 end
