@@ -211,7 +211,7 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "<input type='submit'"
   end
 
-  def test_signin_in
+  def test_signin_with_wrong_credentials
     post '/signin'
     assert_equal 200, last_response.status
     assert_includes last_response.body, 'Wrong credentials'
@@ -219,7 +219,9 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "method='post'"
     assert_includes last_response.body, "<label for='password'"
     assert_includes last_response.body, "<input type='submit'"
+  end
 
+  def test_successful_signin
     post '/signin', username: 'admin', password: 'secret'
     assert_equal 302, last_response.status
 
@@ -227,6 +229,7 @@ class CmsTest < Minitest::Test
     assert_equal 200, last_response.status
     refute_includes last_response.body, "<form action='/signin"
     assert_includes last_response.body, "Welcome"
+    assert_includes last_response.body, "Signed in as admin"
     assert_includes last_response.body, "<form action='/signout'"
     assert_includes last_response.body, "method='post'"
     refute_includes last_response.body, "<label for='password'"
