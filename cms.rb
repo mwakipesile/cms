@@ -50,6 +50,16 @@ helpers do
       erb :file
     end
   end
+
+  def restricted_message
+    session[:message] = 'You must be signed in to do that'
+  end
+
+  def redirect_unauthorized_user
+    return if session[:username]
+    restricted_message
+    redirect('/')
+  end
 end
 
 get '/' do
@@ -59,6 +69,8 @@ get '/' do
 end
 
 get '/:filename/edit' do |filename|
+  redirect_unauthorized_user
+  
   @filename = filename
   @file_content = File.read(File.join(data_path, filename))
   headers['Content-Type'] = 'text/html;charset=utf-8'
@@ -67,10 +79,13 @@ get '/:filename/edit' do |filename|
 end
 
 get '/new' do
+  redirect_unauthorized_user
   erb :new_file
 end
 
 post '/files/create' do
+  redirect_unauthorized_user
+
   filename = params[:document_name]
 
   if !filename.match(/\w+\.\w{2,}/)
@@ -88,6 +103,8 @@ post '/files/create' do
 end
 
 post '/files/delete/:filename' do |filename|
+  redirect_unauthorized_user
+
   if !file_list.include?(filename)
     session[:message] = "File with name #{filename} doesn't exist"
   else
@@ -138,6 +155,8 @@ get '/*.*' do |filename, ext|
 end
 
 post '/:filename' do |filename|
+  redirect_unauthorized_user
+
   filepath = File.join(data_path, filename)
   text = params[:file_content]
 
