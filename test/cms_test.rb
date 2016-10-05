@@ -82,7 +82,8 @@ class CmsTest < Minitest::Test
 
   def test_editing_file
     create_document "about.md"
-    get '/about.md/edit'
+
+    get '/about.md/edit', {}, admin_session
     assert_equal 200, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
     assert_includes last_response.body, "form"
@@ -93,7 +94,8 @@ class CmsTest < Minitest::Test
 
   def test_save_edited_file
     create_document "about.md", "photos.jpg"
-    get '/about.md'
+
+    get '/about.md', {}, admin_session
     assert_equal 200, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
     assert_includes last_response.body, "photos.jpg"
@@ -122,7 +124,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_create_new_file
-    get '/'
+    get '/', {}, admin_session
     assert_equal 200, last_response.status
     assert_includes last_response.body, "New Document"
     assert_includes last_response.body, "/new"
@@ -137,7 +139,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_save_new_file
-    post '/files/create', document_name: "README.md"
+    post '/files/create', { document_name: "README.md" }, admin_session
     assert_equal 302, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
 
@@ -154,7 +156,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_reject_blank_filename
-    post '/files/create', document_name: ""
+    post '/files/create', { document_name: ""} , admin_session
     assert_equal 422, last_response.status
     assert_includes last_response.body, 'A valid name is required'
     assert_includes last_response.body, "form"
@@ -164,7 +166,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_reject_filename_missing_extension
-    post '/files/create', document_name: "mydoc"
+    post '/files/create', { document_name: "mydoc" }, admin_session
     assert_equal 422, last_response.status
     assert_includes last_response.body, 'A valid name is required'
     assert_includes last_response.body, "form"
@@ -174,7 +176,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_reject_duplicate_filename
-    post '/files/create', document_name: "mydoc.txt"
+    post '/files/create', { document_name: "mydoc.txt" }, admin_session
 
     get "/"
     assert_includes last_response.body, "mydoc.txt"
@@ -189,7 +191,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_delete_file
-    post '/files/create', document_name: "mydoc.txt"
+    post '/files/create', { document_name: "mydoc.txt" }, admin_session
     post '/files/create', document_name: "mydoc.md"
 
     get "/"
@@ -259,5 +261,22 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "href='/users/signin'>Sign In"
     refute_includes last_response.body, "Signed in as admin"
     refute_includes last_response.body, "<form action='/users/signout'"
+  end
+
+  def test_restricted_actions
+    create_document "about.md"
+    create_document "ruby_releases.txt"
+    create_document "doc_list.txt"
+
+    get '/doc_list.txt/edit'
+    assert_equal 302, last_response.status
+    assert_equal  "You must be signed in to do that", session[:message]
+
+    get last_response['location']
+    assert_equal 200, last_response.status
+    assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
+    assert_includes last_response.body, "about.md"
+    assert_includes last_response.body, "ruby_releases.txt"
+    assert_includes last_response.body, "doc_list.txt"
   end
 end
