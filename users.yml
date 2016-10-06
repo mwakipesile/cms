@@ -1,17 +1,15 @@
 ---
+mwa:
+  password: !ruby/string:BCrypt::Password
+    str: "$2a$10$WyF6BBR9h63ZdKdSq/mZje8vFt0zKgqulJwFr12kyxFKcIIIaDMPK"
+    version: 2a
+    cost: 10
+    salt: "$2a$10$WyF6BBR9h63ZdKdSq/mZje"
+    checksum: 8vFt0zKgqulJwFr12kyxFKcIIIaDMPK
 admin:
-  password: secret
-yet:
-  password: again
-marko:
-  password: polo
-finya:
-  password: youu
-Wabechee:
-  password: pama
-ed:
-  password: caffeine
-mambo:
-  password: bado
-mara:
-  password: moja
+  password: !ruby/string:BCrypt::Password
+    str: "$2a$10$UzwL3lMDI2Lm7mJZ5LQkfuQEPiiITeY.WWO9qt0SW7BHnEUPUWsAG"
+    version: 2a
+    cost: 10
+    salt: "$2a$10$UzwL3lMDI2Lm7mJZ5LQkfu"
+    checksum: QEPiiITeY.WWO9qt0SW7BHnEUPUWsAG

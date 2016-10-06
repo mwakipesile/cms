@@ -28,6 +28,10 @@ class CmsTest < Minitest::Test
     { 'rack.session' => { username: 'admin' } }
   end
 
+  File.open(credentials_path, 'w') do |file|
+    file.write({ 'admin' => { 'password' => encrypt('secret') }}.to_yaml)
+  end
+
   def test_index
     get "/"
     create_document "about.md"
@@ -221,8 +225,8 @@ class CmsTest < Minitest::Test
 
   def test_signin_with_wrong_credentials
     post '/users/signin', username: 'admin', password: 'papaya'
-    assert_equal 200, last_response.status
-    assert_includes last_response.body, 'Wrong credentials'
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'Invalid credentials'
     assert_includes last_response.body, "<form action='/users/signin"
     assert_includes last_response.body, "method='post'"
     assert_includes last_response.body, "<label for='password'"

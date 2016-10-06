@@ -4,11 +4,20 @@ require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
 require 'tilt/erubis'
 require 'redcarpet'
+require 'bcrypt'
 
 configure do
   enable :sessions
   set :session_secret, 'password1'
   set :erb, escape_html: true
+end
+
+def encrypt(password)
+  BCrypt::Password.create(password)
+end
+
+def check?(password, encrypted_password)
+  BCrypt::Password.new(encrypted_password) == password
 end
 
 def data_path
@@ -40,7 +49,6 @@ end
 before do
   headers['Content-Type'] = 'text/html;charset=utf-8'
   @users = load_user_credentials
-  # session[:auth] = [{username: 'admin', password: 'secret'}]
 end
 
 helpers do
@@ -165,7 +173,7 @@ post '/users/signup' do
     redirect('/users/signup')
   end
 
-  @users[username] = { 'password' => password }
+  @users[username] = { 'password' => encrypt(password) }
   File.open(credentials_path, 'w') do |file|
     file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
   end
@@ -182,13 +190,14 @@ post '/users/signin' do
   password = params[:password]
 
   user =   @users[username]
-  session[:username] = username if user && user['password'] == password
+  session[:username] = username if user && check?(password, user['password'])
 
   if session[:username]
     session[:message] = 'Welcome!'
     redirect('/')
   else
-    session[:message] = 'Wrong credentials'
+    status(422)
+    session[:message] = 'Invalid credentials'
     erb :signin
   end
 end
