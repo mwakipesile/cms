@@ -1,0 +1,30 @@
+<form action='/users/signup' method='post'>
+  <dl>
+    <dt>
+      <label for='username'>Username:</label>
+    </dt>
+    <dd>
+      <input name='username' placeholder='Username' type='text' value='<%= params[:username] %>'>
+    </dd>
+  </dl>
+  <dl>
+    <dt>
+      <label for='password'>Password:</label>
+    </dt>
+    <dd>
+      <input name='password' placeholder='Password' type='password' value=''>
+    </dd>
+  </dl>
+  <dl>
+    <dt>
+      <label for='password2'>Repeat password:</label>
+    </dt>
+    <dd>
+      <input name='password2' placeholder='Password' type='password' value=''>
+    </dd>
+  </dl>
+  <fieldset class='actions'>
+    <input type='submit' value='Sign Up'>
+    <a href='/'>Cancel</a>
+  </fieldset>
+</form>
