@@ -1,3 +1,4 @@
+require 'yaml'
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
@@ -18,6 +19,18 @@ def data_path
   end
 end
 
+def credentials_path
+  if ENV["RACK_ENV"] == "test"
+    File.expand_path("../test/users.yml", __FILE__)
+  else
+    File.expand_path("../users.yml", __FILE__)
+  end
+end
+
+def load_user_credentials
+  YAML.load_file(credentials_path)
+end
+
 def create_document(name, content = '')
   File.open(File.join(data_path, name), 'w') do |file|
     file.write(content)
@@ -26,7 +39,8 @@ end
 
 before do
   headers['Content-Type'] = 'text/html;charset=utf-8'
-  session[:auth] = [{username: 'admin', password: 'secret'}]
+  @users = load_user_credentials
+  # session[:auth] = [{username: 'admin', password: 'secret'}]
 end
 
 helpers do
@@ -51,6 +65,24 @@ helpers do
     end
   end
 
+  def invalid_username(username)  
+    if username.size < 2
+      session[:message] = 'Username must be at least 2 characters long'
+    elsif username.match(/\W/)
+      session[:message] = 'Username can contain alphanumeric only'
+    elsif @users[username]
+      session[:message] = 'That username has already been taken'
+    end
+  end
+
+  def invalid_password(password)
+    if password.size < 4
+      session[:message] = 'Password must be at least 4 characters long'
+    elsif password.match(/\W+/)
+      session[:message] = 'Password must be alphanumeric'
+    end
+  end
+
   def restricted_message
     session[:message] = 'You must be signed in to do that'
   end
@@ -70,7 +102,7 @@ end
 
 get '/:filename/edit' do |filename|
   redirect_unauthorized_user
-  
+
   @filename = filename
   @file_content = File.read(File.join(data_path, filename))
   headers['Content-Type'] = 'text/html;charset=utf-8'
@@ -115,6 +147,32 @@ post '/files/delete/:filename' do |filename|
   redirect('/')
 end
 
+get '/users/signup' do
+  erb :signup
+end
+
+post '/users/signup' do
+  username = params[:username]
+  password = params[:password]
+  password2 = params[:password2]
+
+  if invalid_username(username) || invalid_password(password)
+    redirect('/users/signup')
+  end
+
+  if password != password2
+    session[:message] = 'Passwords don\'t match'
+    redirect('/users/signup')
+  end
+
+  @users[username] = { 'password' => password }
+  File.open(credentials_path, 'w') do |file|
+    file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
+  end
+  session[:message] = 'Welcome!'
+  redirect('/')
+end
+
 get '/users/signin' do
   erb :signin
 end
@@ -123,11 +181,8 @@ post '/users/signin' do
   username = params[:username]
   password = params[:password]
 
-  session[:auth].each do |hash|
-    next unless hash[:username] == username
-    session[:username] = username if hash[:password] == password
-    break
-  end
+  user =   @users[username]
+  session[:username] = username if user && user['password'] == password
 
   if session[:username]
     session[:message] = 'Welcome!'
