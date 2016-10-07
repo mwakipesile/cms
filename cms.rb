@@ -6,6 +6,8 @@ require 'tilt/erubis'
 require 'redcarpet'
 require 'bcrypt'
 
+VALID_FILE_EXTENSIONS = %w(.txt .md .doc .jpg .jpeg .png .pdf)
+
 configure do
   enable :sessions
   set :session_secret, 'password1'
@@ -130,6 +132,8 @@ post '/files/create' do
 
   if !filename.match(/\w+\.\w{2,}/)
     session[:message] = 'A valid name is required'
+  elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
+    session[:message] = 'Invalid extension'
   elsif file_list.include?(filename)
     session[:message] = "A document with name #{filename} already exists"
   else
