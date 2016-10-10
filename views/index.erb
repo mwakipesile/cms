@@ -6,6 +6,10 @@
       <form action='files/delete/<%= filename %>' method='post' class='delete'>
         <button type='submit'>Delete</button>
       </form>      
+    
+      <form action='files/duplicate/<%= filename %>' method='post' class='duplicate'>
+        <button type='submit'>Duplicate</button>
+      </form>      
     </li>
   <% end %>
 </ul>

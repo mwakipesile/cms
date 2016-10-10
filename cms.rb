@@ -88,8 +88,8 @@ helpers do
   def invalid_password(password)
     if password.size < 4
       session[:message] = 'Password must be at least 4 characters long'
-    elsif password.match(/\W+/)
-      session[:message] = 'Password must be alphanumeric'
+    elsif !password.match(/\w+/)
+      session[:message] = 'Password must contain alphanumeric character'
     end
   end
 
@@ -101,6 +101,18 @@ helpers do
     return if session[:username]
     restricted_message
     redirect('/')
+  end
+
+  def create_duplicate_file_name(filename)
+    current_files = file_list
+    basename = File.basename(filename, filename.match(/\d*\.\w{2,}/).to_s)
+    append_number = filename.match(/\d+(?!.*\d+)/).to_s.to_i + 1
+
+    loop do
+      new_filename = "#{basename}#{append_number}#{File.extname(filename)}"
+      return new_filename unless current_files.include?(new_filename)
+      append_number += 1
+    end
   end
 end
 
@@ -154,6 +166,27 @@ post '/files/delete/:filename' do |filename|
   else
     File.delete(File.join(data_path, filename))
     session[:message] = "#{filename} has been deleted"
+  end
+
+  if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
+    session.delete(:message)
+    status 204
+  else
+    redirect('/')
+  end
+end
+
+post '/files/duplicate/:filename' do |filename|
+  redirect_unauthorized_user
+
+  if !file_list.include?(filename)
+    session[:message] = "File with name #{filename} doesn't exist"
+  else
+    new_filename = create_duplicate_file_name(filename)
+    content = File.read(File.join(data_path, filename))
+    create_document(new_filename, content)
+
+    session[:message] = "#{new_filename} has been created"
   end
 
   redirect('/')
