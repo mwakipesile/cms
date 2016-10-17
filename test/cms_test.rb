@@ -99,12 +99,12 @@ class CmsTest < Minitest::Test
   def test_save_edited_file
     create_document "about.md", "photos.jpg"
 
-    get '/about.md', {}, admin_session
+    get '/about.md/edit', {}, admin_session
     assert_equal 200, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
     assert_includes last_response.body, "photos.jpg"
 
-    post '/about.md', file_content: "# BIGHEAD\n## Small head\nline  \nbreak"
+    post '/about.md/edit', file_content: "# BIGHEAD\n## Small head\nline  \nbreak"
     assert_equal 302, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
 
