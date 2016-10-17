@@ -58,7 +58,7 @@ end
 helpers do
   def file_list(subpath = '')
     abs_path = data_path(subpath)
-    Dir.glob(File.join(abs_path, '*')).map { |path| File.basename(path) }
+    Dir.glob(File.join(abs_path, '*.*')).map { |path| File.basename(path) }
   end
 
   def render_markdown(text)
@@ -192,6 +192,7 @@ post '/files/delete/:filename' do |filename|
     
     revisions = File.join(data_path, filename.sub('.', ''))
     FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
+
     session[:message] = "#{filename} has been deleted"
   end
 
