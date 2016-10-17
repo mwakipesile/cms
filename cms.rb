@@ -211,8 +211,9 @@ post '/files/duplicate/:filename' do |filename|
     session[:message] = "File with name #{filename} doesn't exist"
   else
     new_filename = create_duplicate_file_name(filename)
-    content = File.read(File.join(data_path, filename))
-    create_document(new_filename, content)
+    source_path = File.join(data_path, filename)
+    destination_path = File.join(data_path, new_filename)
+    FileUtils.cp(source_path, destination_path)
 
     session[:message] = "#{new_filename} has been created"
   end
@@ -244,8 +245,6 @@ post '/:filename/edit' do |filename|
   edited_content = params[:file_content]
 
   File.open(filepath, 'w') { |file| file.write(edited_content) }
-
-
 
   session[:message] = "#{filename} has been updated!"
   redirect('/')
