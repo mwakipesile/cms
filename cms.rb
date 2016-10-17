@@ -22,11 +22,11 @@ def check?(password, encrypted_password)
   BCrypt::Password.new(encrypted_password) == password
 end
 
-def data_path
+def data_path(subdirectory ='' )
   if ENV['RACK_ENV'] == 'test'
-    File.expand_path('../test/data', __FILE__)
+    File.expand_path("../test/data/#{subdirectory}", __FILE__)
   else
-    File.expand_path('../data', __FILE__)
+    File.expand_path("../data/#{subdirectory}", __FILE__)
   end
 end
 
@@ -54,8 +54,9 @@ before do
 end
 
 helpers do
-  def file_list
-    Dir.glob(File.join(data_path, '*')).map { |path| File.basename(path) }
+  def file_list(subpath = '')
+    abs_path = data_path(subpath)
+    Dir.glob(File.join(abs_path, '*')).map { |path| File.basename(path) }
   end
 
   def render_markdown(text)
@@ -114,6 +115,27 @@ helpers do
       append_number += 1
     end
   end
+
+  def save_old_content(filename)
+    filepath = File.join(data_path, filename)
+    file_ext = File.extname(filename)
+    old_content = File.read(filepath)
+    
+    revisions_dir = filename.sub('.', '')
+    revisions_path = data_path(revisions_dir)
+    Dir.mkdir revisions_path unless File.directory?(revisions_path)
+
+    revisions = file_list(revisions_dir)
+
+    if revisions.empty?
+      revision_name = "1#{file_ext}"
+    else
+      basename = revisions.map { |rev| File.basename(rev, '.*').to_i }.max
+      revision_name = "#{basename + 1}#{file_ext}"
+    end
+    
+    create_document("#{revisions_dir}/#{revision_name}", old_content )
+  end
 end
 
 get '/' do
@@ -165,6 +187,8 @@ post '/files/delete/:filename' do |filename|
     session[:message] = "File with name #{filename} doesn't exist"
   else
     File.delete(File.join(data_path, filename))
+    # TODO: delete revs
+    File.delete(File.join(data_path, filename.sub('.', '')))
     session[:message] = "#{filename} has been deleted"
   end
 
@@ -190,6 +214,50 @@ post '/files/duplicate/:filename' do |filename|
   end
 
   redirect('/')
+end
+
+get '/:filename/revisions' do |filename|
+
+  if !file_list.include?(filename)
+    session[:message] = "File with name #{filename} doesn't exist"
+    redirect('/')
+  end
+
+  revisions_dir = filename.sub('.', '')
+
+  @revisions = file_list(revisions_dir).map { |file| File.basename(file, '.*')}
+  @filename = filename
+
+  erb :revisions
+end
+
+post '/:filename/edit' do |filename|
+  redirect_unauthorized_user
+
+  filepath = File.join(data_path, filename)
+
+  save_old_content(filename)
+  edited_content = params[:file_content]
+
+  File.open(filepath, 'w') { |file| file.write(edited_content) }
+
+
+
+  session[:message] = "#{filename} has been updated!"
+  redirect('/')
+end
+
+get '/:filename/revisions/:number' do |filename, number|
+
+  if !file_list.include?(filename)
+    session[:message] = "File with name #{filename} doesn't exist"
+    redirect('/')
+  end
+
+  revision_name = "#{number}#{File.extname(filename)}"
+  revisions_dir = filename.sub('.', '')
+
+  load_file_content(File.join(data_path, "#{revisions_dir}/#{revision_name}"))
 end
 
 get '/users/signup' do
@@ -253,16 +321,4 @@ get '/*.*' do |filename, ext|
     session[:message] = "#{filename}.#{ext} does not exist."
     redirect('/')
   end
-end
-
-post '/:filename' do |filename|
-  redirect_unauthorized_user
-
-  filepath = File.join(data_path, filename)
-  text = params[:file_content]
-
-  File.open(filepath, 'w') { |file| file.write(text) }
-
-  session[:message] = "#{filename} has been updated!"
-  redirect('/')
 end
