@@ -6,6 +6,8 @@ require 'tilt/erubis'
 require 'redcarpet'
 require 'bcrypt'
 
+include FileUtils
+
 VALID_FILE_EXTENSIONS = %w(.txt .md .doc .jpg .jpeg .png .pdf)
 
 configure do
@@ -187,8 +189,9 @@ post '/files/delete/:filename' do |filename|
     session[:message] = "File with name #{filename} doesn't exist"
   else
     File.delete(File.join(data_path, filename))
-    # TODO: delete revs
-    File.delete(File.join(data_path, filename.sub('.', '')))
+    
+    revisions = File.join(data_path, filename.sub('.', ''))
+    FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
     session[:message] = "#{filename} has been deleted"
   end
 
