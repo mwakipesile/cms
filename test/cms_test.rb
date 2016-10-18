@@ -283,4 +283,21 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "ruby_releases.txt"
     assert_includes last_response.body, "doc_list.txt"
   end
+
+  def test_duplicate_file
+    post '/files/create', { document_name: "mydoc.txt" }, admin_session
+
+    get "/"
+    assert_includes last_response.body, "mydoc.txt"
+    refute_includes last_response.body, "mydoc1.txt"
+
+    post '/files/duplicate/mydoc.txt'
+    assert_equal 302, last_response.status
+
+    get last_response["Location"]
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "mydoc1.txt has been created"
+    assert_includes last_response.body, "mydoc.txt"
+    assert_includes last_response.body, "mydoc1.txt"
+  end
 end
