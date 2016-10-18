@@ -127,6 +127,22 @@ class CmsTest < Minitest::Test
     end
   end
 
+  def test_file_revisions
+    create_document "about.md", "photos.jpg"
+
+    get '/about.md/revisions', {}, admin_session
+    refute_includes last_response.body, '/about.md/revisions/1'
+
+    post '/about.md/edit', file_content: "# BIGHEAD\n## Small head\nline"
+
+    get '/about.md/revisions'
+    assert_includes last_response.body, '/about.md/revisions/1'
+
+    get '/about.md/revisions/1'
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'photos.jpg'
+  end
+
   def test_create_new_file
     get '/', {}, admin_session
     assert_equal 200, last_response.status
