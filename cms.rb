@@ -285,6 +285,7 @@ post '/users/signup' do
   File.open(credentials_path, 'w') do |file|
     file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
   end
+  session[:username] = username
   session[:message] = 'Welcome!'
   redirect('/')
 end
