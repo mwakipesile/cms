@@ -230,6 +230,34 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "mydoc.md"
   end
 
+  def test_sign_up_page
+    get '/users/signup'
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "<form action='/users/signup"
+    assert_includes last_response.body, "method='post'"
+    assert_includes last_response.body, "<label for='password'"
+    assert_includes last_response.body, "<label for='password2'"
+    assert_includes last_response.body, "<input name='username'"
+    assert_includes last_response.body, "<input name='password'"
+    assert_includes last_response.body, "<input name='password2'"
+    assert_includes last_response.body, "<input type='submit'"
+  end
+
+  def test_successful_signup
+    post '/users/signup', username: 'admin2', password: 'secret2', password2: 'secret2'
+    assert_equal 302, last_response.status
+    assert_equal "Welcome!", session[:message]
+
+    get last_response["Location"]
+    assert_equal "admin2", session[:username]
+    assert_equal 200, last_response.status
+    refute_includes last_response.body, "<form action='/users/signin"
+    assert_includes last_response.body, "Signed in as admin"
+    assert_includes last_response.body, "<form action='/users/signout'"
+    assert_includes last_response.body, "method='post'"
+    refute_includes last_response.body, "<label for='password'"
+  end
+
   def test_sign_in_page
     get '/users/signin'
     assert_equal 200, last_response.status

@@ -13,3 +13,10 @@ admin:
     cost: 10
     salt: "$2a$10$UzwL3lMDI2Lm7mJZ5LQkfu"
     checksum: QEPiiITeY.WWO9qt0SW7BHnEUPUWsAG
+karanga:
+  password: !ruby/string:BCrypt::Password
+    str: "$2a$10$ZcZwTB6yUBsVi/1AE6uWLOhBOjmiefafChbJgs9cA6eunJoz65TFe"
+    version: 2a
+    cost: 10
+    salt: "$2a$10$ZcZwTB6yUBsVi/1AE6uWLO"
+    checksum: hBOjmiefafChbJgs9cA6eunJoz65TFe
