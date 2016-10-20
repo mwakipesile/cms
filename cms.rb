@@ -9,6 +9,7 @@ require 'bcrypt'
 include FileUtils
 
 VALID_FILE_EXTENSIONS = %w(.txt .md .doc .jpg .jpeg .png .pdf)
+IMG_EXTNAMES = %w(jpg jpeg png gif bmp)
 
 configure do
   enable :sessions
@@ -24,11 +25,11 @@ def check?(password, encrypted_password)
   BCrypt::Password.new(encrypted_password) == password
 end
 
-def data_path(subdirectory ='' )
+def data_path
   if ENV['RACK_ENV'] == 'test'
-    File.expand_path("../test/data/#{subdirectory}", __FILE__)
+    File.expand_path("../test/data", __FILE__)
   else
-    File.expand_path("../data/#{subdirectory}", __FILE__)
+    File.expand_path("../data", __FILE__)
   end
 end
 
@@ -56,8 +57,8 @@ before do
 end
 
 helpers do
-  def file_list(subpath = '')
-    abs_path = data_path(subpath)
+  def file_list(directory = nil)
+    abs_path = directory.nil? ? data_path : File.join(data_path, directory)
     Dir.glob(File.join(abs_path, '*.*')).map { |path| File.basename(path) }
   end
 
@@ -124,7 +125,7 @@ helpers do
     old_content = File.read(filepath)
     
     revisions_dir = filename.sub('.', '')
-    revisions_path = data_path(revisions_dir)
+    revisions_path = File.join(data_path, revisions_dir)
     Dir.mkdir revisions_path unless File.directory?(revisions_path)
 
     revisions = file_list(revisions_dir)
@@ -285,6 +286,7 @@ post '/users/signup' do
   File.open(credentials_path, 'w') do |file|
     file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
   end
+
   session[:username] = username
   session[:message] = 'Welcome!'
   redirect('/')
@@ -317,12 +319,37 @@ post '/users/signout' do
 end
 
 get '/*.*' do |filename, ext|
-  filepath = "#{data_path}/#{filename}.#{ext}"
+  if IMG_EXTNAMES.include?(ext)
+    image = "public/uploads/#{filename}.#{ext}"
+  else
+    filepath = "#{data_path}/#{filename}.#{ext}"
+  end
 
-  if File.exist?(filepath)
-    load_file_content(filepath)
+  if image && File.exist?(image)
+    send_file open(image), type: 'image/jpg'
+  elsif !image && File.exist?(filepath)
+    load_file_content(filepath)    
   else
     session[:message] = "#{filename}.#{ext} does not exist."
     redirect('/')
   end
+end
+
+get '/files/upload' do
+  erb :upload
+end
+
+post '/files/upload' do
+  files = params[:files]
+
+  files.each do |file|
+    filename = file[:filename]
+    tmpfile = file[:tempfile]
+
+    File.open("public/uploads/#{filename}", 'wb') do |file|
+      file.write(tmpfile.read)
+    end
+  end
+
+  redirect('/')
 end

@@ -1,1 +1,5 @@
-<%== @content %>
+<% if @image %>
+  <img src='<%== @image %>'>
+<% else %>
+  <%== @content %>
+<% end %>

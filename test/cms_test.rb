@@ -357,4 +357,8 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, "mydoc.txt"
     assert_includes last_response.body, "mydoc1.txt"
   end
+
+  def test_image_upload_form
+
+  end
 end
