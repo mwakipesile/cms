@@ -33,6 +33,14 @@ def data_path
   end
 end
 
+def image_path
+  if ENV['RACK_ENV'] == 'test'
+    File.expand_path("../test/uploads", __FILE__)
+  else
+    "public/uploads/"
+  end
+end
+
 def credentials_path
   if ENV["RACK_ENV"] == "test"
     File.expand_path("../test/users.yml", __FILE__)
@@ -68,14 +76,15 @@ helpers do
   end
 
   def load_file_content(path)
-    content = File.read(path)
     case File.extname(path)
     when '.txt'
       headers['Content-Type'] = 'text/plain'
-      content
+      send_file path
     when '.md'
-      @content = render_markdown(content)
+      @content = render_markdown(File.read(path))
       erb :file
+    else
+      send_file open(path), type: 'image/png'
     end
   end
 
@@ -320,14 +329,12 @@ end
 
 get '/*.*' do |filename, ext|
   if IMG_EXTNAMES.include?(ext)
-    image = "public/uploads/#{filename}.#{ext}"
+    filepath = "public/uploads/#{filename}.#{ext}"
   else
     filepath = "#{data_path}/#{filename}.#{ext}"
   end
 
-  if image && File.exist?(image)
-    send_file open(image), type: 'image/jpg'
-  elsif !image && File.exist?(filepath)
+  if File.exist?(filepath)
     load_file_content(filepath)    
   else
     session[:message] = "#{filename}.#{ext} does not exist."
@@ -346,7 +353,7 @@ post '/files/upload' do
     filename = file[:filename]
     tmpfile = file[:tempfile]
 
-    File.open("public/uploads/#{filename}", 'wb') do |file|
+    File.open(File.join(image_path, filename), 'wb') do |file|
       file.write(tmpfile.read)
     end
   end

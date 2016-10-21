@@ -14,10 +14,18 @@ class CmsTest < Minitest::Test
 
   def setup
     FileUtils.mkdir_p(data_path)
+    FileUtils.mkdir_p(image_path)
+
+    users = { 'admin' => { 'password' => encrypt('secret') }}
+    File.open(credentials_path, 'w') do |file|
+      file.write(users.to_yaml)
+    end
   end
 
   def teardown
     FileUtils.rm_rf(data_path)
+    FileUtils.rm_rf(image_path)
+    FileUtils.rm_f(credentials_path)
   end
 
   def session
@@ -33,11 +41,11 @@ class CmsTest < Minitest::Test
   end
 
   def test_index
-    get "/"
     create_document "about.md"
     create_document "ruby_releases.txt"
     create_document "doc_list.txt"
 
+    get "/"
     assert_equal 200, last_response.status
     assert_equal "text/html;charset=utf-8", last_response["Content-Type"]
     assert_includes last_response.body, "about.md"
@@ -359,6 +367,20 @@ class CmsTest < Minitest::Test
   end
 
   def test_image_upload_form
+    get '/files/upload', {}, admin_session
+    assert_equal 200, last_response.status
 
+    assert_includes last_response.body, 'input type="file"'
+    assert_includes last_response.body, "enctype='multipart/form-data'"
+    assert_includes last_response.body, "<form action='/files/upload'"
+  end
+
+  def test_image_upload
+    post '/files/upload', {
+      files: [Rack::Test::UploadedFile.new("C:/Users/Edgar/Downloads/hustler-ruto-jet.png", "image/jpeg")]
+      }, admin_session
+
+    files = Dir[File.join(image_path, '*')].map { |path| File.basename(path) }
+    assert_includes files, 'hustler-ruto-jet.png'
   end
 end
