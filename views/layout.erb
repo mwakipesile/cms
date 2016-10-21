@@ -50,9 +50,11 @@
                   document.getElementById('thumbnails').insertBefore(span, null);
 
                   var filename = document.createElement('input');
-                  filename.setAttribute('name', 'filename'); 
-                  filename.setAttribute('type', 'text'); 
-                  filename.setAttribute('value', escape(theFile.name)); 
+                  $(filename).attr({
+                  'name': escape(theFile.name),
+                  'type': 'text',
+                  'value': escape(theFile.name)
+                  });
                   document.getElementById('thumbnails').insertBefore(filename, null);
                 };
               })(f);
