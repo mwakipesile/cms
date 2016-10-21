@@ -9,7 +9,7 @@ require 'bcrypt'
 include FileUtils
 
 VALID_FILE_EXTENSIONS = %w(.txt .md .doc .jpg .jpeg .png .pdf)
-IMG_EXTNAMES = %w(jpg jpeg png gif bmp)
+IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp)
 
 configure do
   enable :sessions
@@ -325,17 +325,18 @@ post '/users/signout' do
   redirect('/')
 end
 
-get '/*.*' do |filename, ext|
-  if IMG_EXTNAMES.include?(ext)
-    filepath = "public/uploads/#{filename}.#{ext}"
+get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
+
+  if IMG_EXTNAMES.include?(File.extname(filename))
+    filepath = "public/uploads/#{filename}"
   else
-    filepath = "#{data_path}/#{filename}.#{ext}"
+    filepath = "#{data_path}/#{filename}"
   end
 
   if File.exist?(filepath)
     load_file_content(filepath)    
   else
-    session[:message] = "#{filename}.#{ext} does not exist."
+    session[:message] = "#{filename} does not exist."
     redirect('/')
   end
 end
@@ -348,10 +349,8 @@ end
 post '/files/upload' do
   redirect_unauthorized_user
 
-  files = params[:files]
-
-  files.each do |file|
-    filename = params[:filename]
+  params[:files].each do |file|
+    filename = params[file[:filename]] || file[:filename]
     tmpfile = file[:tempfile]
 
     FileUtils.cp(tmpfile.path, File.join(image_path, filename))
