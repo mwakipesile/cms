@@ -356,9 +356,7 @@ post '/files/upload' do
     filename = file[:filename]
     tmpfile = file[:tempfile]
 
-    File.open(File.join(image_path, filename), 'wb') do |file|
-      file.write(tmpfile.read)
-    end
+    FileUtils.cp(tmpfile.path, File.join(image_path, filename))
   end
 
   redirect('/')
