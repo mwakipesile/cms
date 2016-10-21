@@ -283,22 +283,20 @@ post '/users/signup' do
   password2 = params[:password2]
 
   if invalid_username(username) || invalid_password(password)
-    redirect('/users/signup')
+  elsif password != password2
+    session[:message] = 'Passwords don\'t match' 
+  else
+    @users[username] = { 'password' => encrypt(password) }
+    File.open(credentials_path, 'w') do |file|
+      file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
+    end
+
+    session[:username] = username
+    session[:message] = 'Welcome!'
+    redirect('/')
   end
 
-  if password != password2
-    session[:message] = 'Passwords don\'t match'
-    redirect('/users/signup')
-  end
-
-  @users[username] = { 'password' => encrypt(password) }
-  File.open(credentials_path, 'w') do |file|
-    file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
-  end
-
-  session[:username] = username
-  session[:message] = 'Welcome!'
-  redirect('/')
+  erb :signup
 end
 
 get '/users/signin' do
@@ -353,7 +351,7 @@ post '/files/upload' do
   files = params[:files]
 
   files.each do |file|
-    filename = file[:filename]
+    filename = params[:filename]
     tmpfile = file[:tempfile]
 
     FileUtils.cp(tmpfile.path, File.join(image_path, filename))
