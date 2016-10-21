@@ -343,10 +343,13 @@ get '/*.*' do |filename, ext|
 end
 
 get '/files/upload' do
+  redirect_unauthorized_user
   erb :upload
 end
 
 post '/files/upload' do
+  redirect_unauthorized_user
+
   files = params[:files]
 
   files.each do |file|
