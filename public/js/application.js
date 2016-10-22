@@ -15,7 +15,7 @@ $(function() {
 
       request.done(function(data, textStatus, jqXHR) {
         if (jqXHR.status == 204) {
-          form.parent("li").remove();
+          form.parents("li").remove();
         } else if (jqXHR.status == 200) {
           document.location = data;
         }
