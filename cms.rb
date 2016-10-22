@@ -8,7 +8,7 @@ require 'bcrypt'
 
 include FileUtils
 
-VALID_FILE_EXTENSIONS = %w(.txt .md .doc .jpg .jpeg .png .pdf)
+VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf)
 IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp)
 
 configure do

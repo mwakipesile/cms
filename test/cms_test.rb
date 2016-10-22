@@ -268,15 +268,13 @@ class CmsTest < Minitest::Test
 
   def test_signup_with_unmatched_passwords
     post '/users/signup', username: 'admin1', password: 'secret', password2: 'secret2'
-    assert_equal 302, last_response.status
-    assert_equal "Passwords don't match", session[:message]
 
-    get last_response["Location"]
     assert_equal 200, last_response.status
     assert_includes last_response.body, "<form action='/users/signup"
     assert_includes last_response.body, "method='post'"
     assert_includes last_response.body, "<label for='password'"
     assert_includes last_response.body, "<label for='password2'"
+    assert_includes last_response.body, "Passwords don't match"
   end
 
   def test_sign_in_page
