@@ -14,6 +14,7 @@
       <h1><a href='/'>CMS</a></h1>
       <div class='actions'>
           <a class='add' href='/new'>New Document</a>
+          <a class='upload' href='files/upload'>Upload</a>
           <% if session[:username] %>
             <span>Signed in as <%= session[:username] %></span>
             <form action='/users/signout' method='post' class='signout'>

@@ -306,7 +306,7 @@ form fieldset.actions a:hover {
   }
 }
 
-#files li span {
+#files li ul {
   display: inline-block;
   width: 49%;
   text-align: right;
@@ -314,29 +314,29 @@ form fieldset.actions a:hover {
 }
 
 @media screen and (max-width: 650px) {
-  #files li span {
+  #files li ul li {
     display: block;
     width: auto;
     text-align: left; 
   }
 }
 
-#files li span li {
+#files li ul li {
   display: inline-block;
   margin: 0 0 0 40px; 
 }
 
 @media screen and (max-width: 650px) {
-  #files li span li {
+  #files li ul li {
     margin: 0 40px 0 0; 
   }
 }
 
-#files li span a {
+#files li ul li a {
   display: block; 
 }
 
-#files li span a:before {
+#files li ul li a:before {
   display: inline-block;
   width: 24px;
   height: 24px;
@@ -345,39 +345,39 @@ form fieldset.actions a:hover {
   content: ""; 
 }
 
-#files li span a.edit {
+#files li ul li a.edit {
   -webkit-transition: background-color 200ms ease;
   -moz-transition: background-color 200ms ease;
   -o-transition: background-color 200ms ease;
 }
 
-#files li span a.edit:hover {
+#files li ul li a.edit:hover {
   color: #dd5f4f;
 }
 
-#files li span a.edit:before {
+#files li ul li a.edit:before {
   border: 2px solid transparent;
   background: transparent url("../images/icon_edit.png") 0 0 no-repeat; 
 }
 
-#files span {
+/* #files li {
   padding: 10px 0 10px 0; 
-}
+} */
 
-#files li {
+#files > li {
   position: relative;
   padding: 10px 0;
   margin: 0 0 25px 60px;
   border-bottom: 1px solid #d7d7d7; 
 }
 
-#files li span form {
-  position: absolute;
+#files li ul li form {
+  position: relative;
   top: 50%;
   z-index: 1; 
 }
 
-#files li span .delete {
+#files li ul li .delete {
   right: 20px;
   width: 24px;
   height: 27px;
@@ -386,7 +386,17 @@ form fieldset.actions a:hover {
   background: transparent url("../images/icon_delete.png") 0 3px no-repeat; 
 }
 
-#files li span .delete [type="submit"] {
+#files li ul li .duplicate {
+  right: 20px;
+  width: 24px;
+  height: 27px;
+  margin: -12px 0 0 0;
+  opacity: 0.4;
+  background: transparent url("../images/icon_duplicate.png") 0 3px no-repeat; 
+}
+
+#files li ul li .delete [type="submit"],
+#files li ul li .duplicate [type="submit"] {
   width: 24px;
   height: 24px;
   color: transparent;
@@ -395,7 +405,7 @@ form fieldset.actions a:hover {
   border: none; 
 }
 
-#files li span .delete:hover {
+#files li ul li .delete:hover, #files li ul li .duplicate:hover {
   opacity: 1; 
 }
 
