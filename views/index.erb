@@ -14,16 +14,3 @@
     </li>
   <% end %>
 </ul>
-
-<% content_for :header_link do %>
-  <a class='add' href='/new'>New Document</a>
-  <% if session[:username] %>
-    <span>Signed in as <%= session[:username] %></span>
-    <form action='/users/signout' method='post' class='signout'>
-      <button type='submit'>Sign Out</button>
-    </form> 
-  <% else %>
-    <a class='signin' href='/users/signin'>Sign In</a>
-    <a class='signup' href='/users/signup'>Sign Up</a>
-  <% end %>
-<% end %>
