@@ -2,4 +2,3 @@ about.txt
 changes.txt
 history.txt
 new.txt
-new2.txt

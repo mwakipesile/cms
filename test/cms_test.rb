@@ -58,7 +58,7 @@ class CmsTest < Minitest::Test
     get "/test.txt"
     assert_equal 200, last_response.status
     assert_equal "text/plain", last_response["Content-Type"]
-    assert_includes last_response.body, "testing this bitch!"
+    assert_includes last_response.body, "testing this!"
   end
 
   def test_nonexistent_file

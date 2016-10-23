@@ -154,7 +154,7 @@ helpers do
   end
 
   def create_revision_name(revisions, extname)
-    return "1#{file_ext}" if revisions.empty?
+    return "1#{extname}" if revisions.empty?
 
     last_revision = revisions.map { |rev| File.basename(rev, '.*').to_i }.max
     "#{last_revision + 1}#{extname}"
