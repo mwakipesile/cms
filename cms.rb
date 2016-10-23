@@ -8,8 +8,8 @@ require 'bcrypt'
 
 include FileUtils
 
-VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf)
-IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp)
+VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf).freeze
+IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp).freeze
 
 configure do
   enable :sessions
@@ -27,25 +27,25 @@ end
 
 def data_path
   if ENV['RACK_ENV'] == 'test'
-    File.expand_path("../test/data", __FILE__)
+    File.expand_path('../test/data', __FILE__)
   else
-    File.expand_path("../data", __FILE__)
+    File.expand_path('../data', __FILE__)
   end
 end
 
 def image_path
   if ENV['RACK_ENV'] == 'test'
-    File.expand_path("../test/uploads", __FILE__)
+    File.expand_path('../test/uploads', __FILE__)
   else
-    "public/uploads/"
+    'public/uploads/'
   end
 end
 
 def credentials_path
-  if ENV["RACK_ENV"] == "test"
-    File.expand_path("../test/users.yml", __FILE__)
+  if ENV['RACK_ENV'] == 'test'
+    File.expand_path('../test/users.yml', __FILE__)
   else
-    File.expand_path("../users.yml", __FILE__)
+    File.expand_path('../users.yml', __FILE__)
   end
 end
 
@@ -70,6 +70,12 @@ helpers do
     Dir.glob(File.join(abs_path, '*.*')).map { |path| File.basename(path) }
   end
 
+  def redirect_unless_file_exists(filename)
+    return if file_list.include?(filename)
+    session[:message] = "File with name #{filename} doesn't exist"
+    redirect('/')
+  end
+
   def render_markdown(text)
     markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
     markdown.render(text)
@@ -88,10 +94,10 @@ helpers do
     end
   end
 
-  def invalid_username(username)  
+  def invalid_username(username)
     if username.size < 2
       session[:message] = 'Username must be at least 2 characters long'
-    elsif username.match(/\W/)
+    elsif username =~ /\W/
       session[:message] = 'Username can contain alphanumeric only'
     elsif @users[username]
       session[:message] = 'That username has already been taken'
@@ -119,34 +125,39 @@ helpers do
   def create_duplicate_file_name(filename)
     current_files = file_list
     basename = File.basename(filename, filename.match(/\d*\.\w{2,}/).to_s)
-    append_number = filename.match(/\d+(?!.*\d+)/).to_s.to_i + 1
+    copy_number = filename.match(/\d+(?!.*\d+)/).to_s.to_i + 1
 
     loop do
-      new_filename = "#{basename}#{append_number}#{File.extname(filename)}"
+      new_filename = "#{basename}#{copy_number}#{File.extname(filename)}"
       return new_filename unless current_files.include?(new_filename)
-      append_number += 1
+      copy_number += 1
     end
+  end
+
+  def revisions_dir(filename)
+    filename.reverse.sub('.', '').reverse
   end
 
   def save_old_content(filename)
     filepath = File.join(data_path, filename)
     file_ext = File.extname(filename)
     old_content = File.read(filepath)
-    
-    revisions_dir = filename.sub('.', '')
-    revisions_path = File.join(data_path, revisions_dir)
+
+    dir = revisions_dir(filename)
+    revisions_path = File.join(data_path, dir)
     Dir.mkdir revisions_path unless File.directory?(revisions_path)
 
-    revisions = file_list(revisions_dir)
+    revisions = file_list(dir)
+    revision_name = create_revision_name(revisions, file_ext)
 
-    if revisions.empty?
-      revision_name = "1#{file_ext}"
-    else
-      basename = revisions.map { |rev| File.basename(rev, '.*').to_i }.max
-      revision_name = "#{basename + 1}#{file_ext}"
-    end
-    
-    create_document("#{revisions_dir}/#{revision_name}", old_content )
+    create_document("#{dir}/#{revision_name}", old_content)
+  end
+
+  def create_revision_name(revisions, extname)
+    return "1#{file_ext}" if revisions.empty?
+
+    last_revision = revisions.map { |rev| File.basename(rev, '.*').to_i }.max
+    "#{last_revision + 1}#{extname}"
   end
 end
 
@@ -154,16 +165,6 @@ get '/' do
   @filenames = file_list
 
   erb :index
-end
-
-get '/:filename/edit' do |filename|
-  redirect_unauthorized_user
-
-  @filename = filename
-  @file_content = File.read(File.join(data_path, filename))
-  headers['Content-Type'] = 'text/html;charset=utf-8'
-
-  erb :edit_file
 end
 
 get '/new' do
@@ -192,21 +193,61 @@ post '/files/create' do
   erb :new_file
 end
 
+get '/:filename/edit' do |filename|
+  redirect_unauthorized_user
+  redirect_unless_file_exists(filename)
+
+  @filename = filename
+  @file_content = File.read(File.join(data_path, filename))
+  headers['Content-Type'] = 'text/html;charset=utf-8'
+
+  erb :edit_file
+end
+
+post '/:filename/edit' do |filename|
+  redirect_unauthorized_user
+  redirect_unless_file_exists(filename)
+  save_old_content(filename)
+
+  edited_content = params[:file_content]
+  filepath = File.join(data_path, filename)
+  File.open(filepath, 'w') { |file| file.write(edited_content) }
+
+  session[:message] = "#{filename} has been updated!"
+  redirect('/')
+end
+
+get '/:filename/revisions' do |filename|
+  redirect_unless_file_exists(filename)
+
+  dir = revisions_dir(filename)
+  @filename = filename
+  @revisions = file_list(dir).map { |file| File.basename(file, '.*') }
+
+  erb :revisions
+end
+
+get '/:filename/revisions/:number' do |filename, number|
+  redirect_unless_file_exists(filename)
+
+  revision_name = "#{number}#{File.extname(filename)}"
+  dir = revisions_dir(filename)
+
+  load_file_content(File.join(data_path, "#{dir}/#{revision_name}"))
+end
+
 post '/files/delete/:filename' do |filename|
   redirect_unauthorized_user
+  redirect_unless_file_exists(filename)
 
-  if !file_list.include?(filename)
-    session[:message] = "File with name #{filename} doesn't exist"
-  else
-    File.delete(File.join(data_path, filename))
-    
-    revisions = File.join(data_path, filename.sub('.', ''))
-    FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
+  File.delete(File.join(data_path, filename))
 
-    session[:message] = "#{filename} has been deleted"
-  end
+  revisions = File.join(data_path, filename.sub('.', ''))
+  FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
 
-  if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
+  session[:message] = "#{filename} has been deleted"
+
+  if env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
     session.delete(:message)
     status 204
   else
@@ -216,61 +257,16 @@ end
 
 post '/files/duplicate/:filename' do |filename|
   redirect_unauthorized_user
+  redirect_unless_file_exists(filename)
 
-  if !file_list.include?(filename)
-    session[:message] = "File with name #{filename} doesn't exist"
-  else
-    new_filename = create_duplicate_file_name(filename)
-    source_path = File.join(data_path, filename)
-    destination_path = File.join(data_path, new_filename)
-    FileUtils.cp(source_path, destination_path)
+  new_filename = create_duplicate_file_name(filename)
+  source_path = File.join(data_path, filename)
+  destination_path = File.join(data_path, new_filename)
+  FileUtils.cp(source_path, destination_path)
 
-    session[:message] = "#{new_filename} has been created"
-  end
+  session[:message] = "#{new_filename} has been created"
 
   redirect('/')
-end
-
-get '/:filename/revisions' do |filename|
-
-  if !file_list.include?(filename)
-    session[:message] = "File with name #{filename} doesn't exist"
-    redirect('/')
-  end
-
-  revisions_dir = filename.sub('.', '')
-
-  @revisions = file_list(revisions_dir).map { |file| File.basename(file, '.*')}
-  @filename = filename
-
-  erb :revisions
-end
-
-post '/:filename/edit' do |filename|
-  redirect_unauthorized_user
-
-  filepath = File.join(data_path, filename)
-
-  save_old_content(filename)
-  edited_content = params[:file_content]
-
-  File.open(filepath, 'w') { |file| file.write(edited_content) }
-
-  session[:message] = "#{filename} has been updated!"
-  redirect('/')
-end
-
-get '/:filename/revisions/:number' do |filename, number|
-
-  if !file_list.include?(filename)
-    session[:message] = "File with name #{filename} doesn't exist"
-    redirect('/')
-  end
-
-  revision_name = "#{number}#{File.extname(filename)}"
-  revisions_dir = filename.sub('.', '')
-
-  load_file_content(File.join(data_path, "#{revisions_dir}/#{revision_name}"))
 end
 
 get '/users/signup' do
@@ -284,7 +280,7 @@ post '/users/signup' do
 
   if invalid_username(username) || invalid_password(password)
   elsif password != password2
-    session[:message] = 'Passwords don\'t match' 
+    session[:message] = 'Passwords don\'t match'
   else
     @users[username] = { 'password' => encrypt(password) }
     File.open(credentials_path, 'w') do |file|
@@ -326,7 +322,6 @@ post '/users/signout' do
 end
 
 get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
-
   if IMG_EXTNAMES.include?(File.extname(filename))
     filepath = "public/uploads/#{filename}"
   else
@@ -334,7 +329,7 @@ get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
   end
 
   if File.exist?(filepath)
-    load_file_content(filepath)    
+    load_file_content(filepath)
   else
     session[:message] = "#{filename} does not exist."
     redirect('/')

@@ -54,7 +54,7 @@ class CmsTest < Minitest::Test
   end
 
   def test_render_file
-    create_document "test.txt", "testing this bitch!"
+    create_document "test.txt", "testing this!"
     get "/test.txt"
     assert_equal 200, last_response.status
     assert_equal "text/plain", last_response["Content-Type"]
