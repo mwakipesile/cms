@@ -70,9 +70,13 @@ helpers do
     Dir.glob(File.join(abs_path, '*.*')).map { |path| File.basename(path) }
   end
 
+  def flash_message(message, key = :message)
+    session[key] ||= message
+  end
+
   def redirect_unless_file_exists(filename)
     return if file_list.include?(filename)
-    session[:message] = "File with name #{filename} doesn't exist"
+    flash_message("File with name #{filename} doesn't exist")
     redirect('/')
   end
 
@@ -96,19 +100,19 @@ helpers do
 
   def invalid_username(username)
     if username.size < 2
-      session[:message] = 'Username must be at least 2 characters long'
+      flash_message('Username must be at least 2 characters long')
     elsif username =~ /\W/
-      session[:message] = 'Username can contain alphanumeric only'
+      flash_message('Username can contain alphanumeric only')
     elsif @users[username]
-      session[:message] = 'That username has already been taken'
+      flash_message('That username has already been taken')
     end
   end
 
   def invalid_password(password)
     if password.size < 4
-      session[:message] = 'Password must be at least 4 characters long'
+      flash_message('Password must be at least 4 characters long')
     elsif !password.match(/\w+/)
-      session[:message] = 'Password must contain alphanumeric character'
+      flash_message('Password must contain alphanumeric character')
     end
   end
 
@@ -120,7 +124,7 @@ helpers do
 
   def redirect_logged_in_user
     return unless session[:username]
-    session[:message] = 'You are already logged in'
+    flash_message('You are already logged in')
     redirect(request.referrer)
   end
 
@@ -180,16 +184,17 @@ post '/files/create' do
   filename = params[:document_name]
 
   if !filename.match(/\w+\.\w{2,}/)
-    session[:message] = 'A valid file name is required'
+    flash_message('A valid file name is required')
   elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
-    session[:message] = 'Unsupported extension. File must be one of the' \
-                        "following types: \n" \
-                        "(#{VALID_FILE_EXTENSIONS.join(', ')})"
+    flash_message(
+      "Unsupported extension. File must be one of the following types: \n" \
+      "(#{VALID_FILE_EXTENSIONS.join(', ')})"
+    )
   elsif file_list.include?(filename)
-    session[:message] = "A document with name #{filename} already exists"
+    flash_message("A document with name #{filename} already exists")
   else
     create_document(filename)
-    session[:message] = "#{filename} was created"
+    flash_message("#{filename} was created")
     redirect('/')
   end
 
@@ -217,7 +222,7 @@ post '/:filename/edit' do |filename|
   filepath = File.join(data_path, filename)
   File.open(filepath, 'w') { |file| file.write(edited_content) }
 
-  session[:message] = "#{filename} has been updated!"
+  flash_message("#{filename} has been updated!")
   redirect('/')
 end
 
@@ -249,7 +254,7 @@ post '/files/delete/:filename' do |filename|
   revisions = File.join(data_path, filename.sub('.', ''))
   FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
 
-  session[:message] = "#{filename} has been deleted"
+  flash_message("#{filename} has been deleted")
 
   if env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
     session.delete(:message)
@@ -268,7 +273,7 @@ post '/files/duplicate/:filename' do |filename|
   destination_path = File.join(data_path, new_filename)
   FileUtils.cp(source_path, destination_path)
 
-  session[:message] = "#{new_filename} has been created"
+  flash_message("#{new_filename} has been created")
 
   redirect('/')
 end
@@ -287,7 +292,7 @@ post '/users/signup' do
 
   if invalid_username(username) || invalid_password(password)
   elsif password != password2
-    session[:message] = 'Passwords don\'t match'
+    flash_message('Passwords don\'t match')
   else
     @users[username] = { 'password' => encrypt(password) }
     File.open(credentials_path, 'w') do |file|
@@ -295,7 +300,7 @@ post '/users/signup' do
     end
 
     session[:username] = username
-    session[:message] = 'Welcome!'
+    flash_message('Welcome!')
     redirect('/')
   end
 
@@ -316,18 +321,18 @@ post '/users/signin' do
   session[:username] = username if user && check?(password, user['password'])
 
   if session[:username]
-    session[:message] = 'Welcome!'
+    flash_message('Welcome!')
     redirect('/')
   else
     status(422)
-    session[:message] = 'Invalid credentials'
+    flash_message('Invalid credentials')
     erb :signin
   end
 end
 
 post '/users/signout' do
   redirect_unauthorized_user
-  session[:message] = "Goodbye #{session.delete(:username)}"
+  flash_message("Goodbye #{session.delete(:username)}")
   redirect(request.referrer)
 end
 
@@ -341,7 +346,7 @@ get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
   if File.exist?(filepath)
     load_file_content(filepath)
   else
-    session[:message] = "#{filename} does not exist."
+    flash_message("#{filename} does not exist.")
     redirect('/')
   end
 end

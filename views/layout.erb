@@ -43,7 +43,7 @@
     <main>
       <% if session[:message] %>
         <div class='flash message'>
-          <%= session.delete(:message) %>
+          <p><%= session.delete(:message) %></p>
         </div>
       <% end %>
 
