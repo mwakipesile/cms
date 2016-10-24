@@ -178,9 +178,10 @@ post '/files/create' do
   filename = params[:document_name]
 
   if !filename.match(/\w+\.\w{2,}/)
-    session[:message] = 'A valid name is required'
+    session[:message] = 'A valid file name is required'
   elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
-    session[:message] = 'Invalid extension'
+    session[:message] = "Invalid extension. File must be one of the" \
+                        "following types:\n(#{VALID_FILE_EXTENSIONS.join(', ')})"
   elsif file_list.include?(filename)
     session[:message] = "A document with name #{filename} already exists"
   else
