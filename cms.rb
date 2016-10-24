@@ -112,14 +112,16 @@ helpers do
     end
   end
 
-  def restricted_message
-    session[:message] = 'You must be signed in to do that'
-  end
-
   def redirect_unauthorized_user
     return if session[:username]
-    restricted_message
-    redirect('/')
+    session[:message] ||= 'You must be signed in to do that'
+    redirect(request.referrer)
+  end
+
+  def redirect_logged_in_user
+    return unless session[:username]
+    session[:message] = 'You are already logged in'
+    redirect(request.referrer)
   end
 
   def create_duplicate_file_name(filename)
@@ -180,8 +182,9 @@ post '/files/create' do
   if !filename.match(/\w+\.\w{2,}/)
     session[:message] = 'A valid file name is required'
   elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
-    session[:message] = "Invalid extension. File must be one of the" \
-                        "following types:\n(#{VALID_FILE_EXTENSIONS.join(', ')})"
+    session[:message] = 'Unsupported extension. File must be one of the' \
+                        "following types: \n" \
+                        "(#{VALID_FILE_EXTENSIONS.join(', ')})"
   elsif file_list.include?(filename)
     session[:message] = "A document with name #{filename} already exists"
   else
@@ -271,10 +274,13 @@ post '/files/duplicate/:filename' do |filename|
 end
 
 get '/users/signup' do
+  redirect_logged_in_user
   erb :signup
 end
 
 post '/users/signup' do
+  redirect_logged_in_user
+
   username = params[:username]
   password = params[:password]
   password2 = params[:password2]
@@ -297,10 +303,12 @@ post '/users/signup' do
 end
 
 get '/users/signin' do
+  redirect_logged_in_user
   erb :signin
 end
 
 post '/users/signin' do
+  redirect_logged_in_user
   username = params[:username]
   password = params[:password]
 
@@ -318,8 +326,9 @@ post '/users/signin' do
 end
 
 post '/users/signout' do
+  redirect_unauthorized_user
   session[:message] = "Goodbye #{session.delete(:username)}"
-  redirect('/')
+  redirect(request.referrer)
 end
 
 get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|

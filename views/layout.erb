@@ -13,17 +13,30 @@
     <header>
       <h1><a href='/'>CMS</a></h1>
       <div class='actions'>
+        <% path = request.path_info %>
+        <% if path != '/' %>
+          <a class='documents' href='/'>All Documents</a>
+        <% end %>
+        <% if path.casecmp('/new') != 0 %>
           <a class='add' href='/new'>New Document</a>
-          <a class='upload' href='files/upload'>Upload</a>
-          <% if session[:username] %>
-            <span>Signed in as <%= session[:username] %></span>
-            <form action='/users/signout' method='post' class='signout'>
-              <button type='submit'>Sign Out</button>
-            </form> 
-          <% else %>
+        <% end %>
+        <% if path.casecmp('/files/upload') != 0 %>
+          <a class='upload' href='/files/upload'>Upload</a>
+        <% end %>
+
+        <% if session[:username] %>
+          <span>Signed in as <%= session[:username] %></span>
+          <form action='/users/signout' method='post' class='signout'>
+            <button type='submit'>Sign Out</button>
+          </form> 
+        <% else %>
+          <% if path.casecmp('/users/signin') != 0 %>
             <a class='signin' href='/users/signin'>Sign In</a>
+          <% end %>
+          <% if path.casecmp('/users/signup') != 0 %>
             <a class='signup' href='/users/signup'>Sign Up</a>
           <% end %>
+        <% end %>
       </div>
     </header>
 

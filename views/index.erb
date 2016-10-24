@@ -6,17 +6,19 @@
         <li>
           <a class='revisions' href='/<%= filename %>/revisions'>Revisions</a>
         </li>
-        <li><a class='edit' href='/<%= filename %>/edit'>Edit</a></li>
-        <li>
-          <form action='files/delete/<%= filename %>' method='post' class='delete'>
-            <button type='submit'>Delete</button>
-          </form>
-        </li>
-        <li>
-          <form action='files/duplicate/<%= filename %>' method='post' class='duplicate'>
-            <button type='submit'>Duplicate</button>
-          </form>
-        </li>
+        <% if session[:username] %>
+          <li><a class='edit' href='/<%= filename %>/edit'>Edit</a></li>
+          <li>
+            <form action='files/delete/<%= filename %>' method='post' class='delete'>
+              <button type='submit'>Delete</button>
+            </form>
+          </li>
+          <li>
+            <form action='files/duplicate/<%= filename %>' method='post' class='duplicate'>
+              <button type='submit'>Duplicate</button>
+            </form>
+          </li>
+        <% end %>
       </ul>   
     </li>
   <% end %>
