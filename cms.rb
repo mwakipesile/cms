@@ -26,28 +26,24 @@ def check?(password, encrypted_password)
   BCrypt::Password.new(encrypted_password) == password
 end
 
-def data_path
+def full_path(path)
   if ENV['RACK_ENV'] == 'test'
-    File.expand_path('../test/data', __FILE__)
+    return File.expand_path("../test/#{path}", __FILE__)
   else
-    File.expand_path('../data', __FILE__)
+    File.expand_path("../#{path}", __FILE__)
   end
+end
+
+def data_path
+  full_path('data')
 end
 
 def image_path
-  if ENV['RACK_ENV'] == 'test'
-    File.expand_path('../test/uploads', __FILE__)
-  else
-    'public/uploads/'
-  end
+  full_path('public/uploads/')
 end
 
 def credentials_path
-  if ENV['RACK_ENV'] == 'test'
-    File.expand_path('../test/users.yml', __FILE__)
-  else
-    File.expand_path('../users.yml', __FILE__)
-  end
+  full_path('users.yml')
 end
 
 def load_user_credentials
