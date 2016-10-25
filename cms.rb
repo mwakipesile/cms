@@ -8,6 +8,7 @@ require 'bcrypt'
 
 include FileUtils
 
+RESTRICTED = %w(new create edit signout upload)
 VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf).freeze
 IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp).freeze
 
@@ -62,6 +63,9 @@ end
 before do
   headers['Content-Type'] = 'text/html;charset=utf-8'
   @users = load_user_credentials
+
+  pass unless restricted_route?
+  redirect_unauthorized_user
 end
 
 helpers do
@@ -114,6 +118,10 @@ helpers do
     elsif !password.match(/\w+/)
       flash_message('Password must contain alphanumeric character')
     end
+  end
+
+  def restricted_route?
+    request.post? || RESTRICTED.include?(request.path_info.split('/').last)
   end
 
   def redirect_unauthorized_user
@@ -174,13 +182,10 @@ get '/' do
 end
 
 get '/new' do
-  redirect_unauthorized_user
   erb :new_file
 end
 
 post '/files/create' do
-  redirect_unauthorized_user
-
   filename = params[:document_name]
 
   if !filename.match(/\w+\.\w{2,}/)
@@ -203,7 +208,6 @@ post '/files/create' do
 end
 
 get '/:filename/edit' do |filename|
-  redirect_unauthorized_user
   redirect_unless_file_exists(filename)
 
   @filename = filename
@@ -214,7 +218,6 @@ get '/:filename/edit' do |filename|
 end
 
 post '/:filename/edit' do |filename|
-  redirect_unauthorized_user
   redirect_unless_file_exists(filename)
   save_old_content(filename)
 
@@ -246,7 +249,7 @@ get '/:filename/revisions/:number' do |filename, number|
 end
 
 post '/files/delete/:filename' do |filename|
-  redirect_unauthorized_user
+  # redirect_unauthorized_user
   redirect_unless_file_exists(filename)
 
   File.delete(File.join(data_path, filename))
@@ -265,7 +268,7 @@ post '/files/delete/:filename' do |filename|
 end
 
 post '/files/duplicate/:filename' do |filename|
-  redirect_unauthorized_user
+  # redirect_unauthorized_user
   redirect_unless_file_exists(filename)
 
   new_filename = create_duplicate_file_name(filename)
@@ -331,7 +334,6 @@ post '/users/signin' do
 end
 
 post '/users/signout' do
-  redirect_unauthorized_user
   flash_message("Goodbye #{session.delete(:username)}")
   redirect(request.referrer)
 end
@@ -352,13 +354,10 @@ get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
 end
 
 get '/files/upload' do
-  redirect_unauthorized_user
   erb :upload
 end
 
 post '/files/upload' do
-  redirect_unauthorized_user
-
   params[:files].each do |file|
     filename = params[file[:filename]] || file[:filename]
     tmpfile = file[:tempfile]
