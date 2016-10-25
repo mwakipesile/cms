@@ -249,7 +249,6 @@ get '/:filename/revisions/:number' do |filename, number|
 end
 
 post '/files/delete/:filename' do |filename|
-  # redirect_unauthorized_user
   redirect_unless_file_exists(filename)
 
   File.delete(File.join(data_path, filename))
@@ -268,7 +267,6 @@ post '/files/delete/:filename' do |filename|
 end
 
 post '/files/duplicate/:filename' do |filename|
-  # redirect_unauthorized_user
   redirect_unless_file_exists(filename)
 
   new_filename = create_duplicate_file_name(filename)
