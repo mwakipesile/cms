@@ -183,6 +183,18 @@ class CmsTest < Minitest::Test
     assert_includes last_response.body, 'README.md'
   end
 
+  def test_reject_filename_with_unsupported_extension
+    post '/files/create', { document_name: 'ruby.exe' }, admin_session
+    assert_equal 422, last_response.status
+    assert_equal 'text/html;charset=utf-8', last_response['Content-Type']
+    assert_includes last_response.body, 'Unsupported extension'
+    assert_includes last_response.body, '<label>Add new document:</label>'
+
+    get '/ruby.exe'
+    assert_equal 302, last_response.status
+    assert_equal 'ruby.exe does not exist.', session[:message]
+  end
+
   def test_reject_blank_filename
     post '/files/create', { document_name: ''} , admin_session
     assert_equal 422, last_response.status
