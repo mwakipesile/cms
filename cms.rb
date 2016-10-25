@@ -8,7 +8,7 @@ require 'bcrypt'
 
 include FileUtils
 
-RESTRICTED = %w(new create delete duplicate edit signout upload)
+RESTRICTED = %w(new create delete duplicate edit signout upload).freeze
 VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf).freeze
 IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp).freeze
 
@@ -88,7 +88,7 @@ helpers do
 
   def load_file_content(path)
     case File.extname(path)
-    when '.txt'
+    when '.txt', '.pdf', '.doc'
       headers['Content-Type'] = 'text/plain'
       send_file path
     when '.md'
