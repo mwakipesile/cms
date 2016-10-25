@@ -8,7 +8,7 @@ require 'bcrypt'
 
 include FileUtils
 
-RESTRICTED = %w(new create edit signout upload)
+RESTRICTED = %w(new create delete duplicate edit signout upload)
 VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf).freeze
 IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp).freeze
 
@@ -78,9 +78,10 @@ helpers do
     session[key] ||= message
   end
 
-  def redirect_unless_file_exists(filename)
-    return if file_list.include?(filename)
-    flash_message("File with name #{filename} doesn't exist")
+  def redirect_unless_file_exists(filename, path = nil)
+    path ||= data_path
+    return if File.exist?(File.join(path, filename))
+    flash_message("#{filename} does not exist.")
     redirect('/')
   end
 
@@ -121,7 +122,7 @@ helpers do
   end
 
   def restricted_route?
-    request.post? || RESTRICTED.include?(request.path_info.split('/').last)
+    RESTRICTED.include?(request.path_info.split('/')[2])
   end
 
   def redirect_unauthorized_user
@@ -181,7 +182,7 @@ get '/' do
   erb :index
 end
 
-get '/new' do
+get '/files/new' do
   erb :new_file
 end
 
@@ -337,18 +338,11 @@ post '/users/signout' do
 end
 
 get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
-  if IMG_EXTNAMES.include?(File.extname(filename))
-    filepath = "public/uploads/#{filename}"
-  else
-    filepath = "#{data_path}/#{filename}"
-  end
+  ext = File.extname(filename)
+  filepath = IMG_EXTNAMES.include?(ext) ? 'public/uploads' : data_path 
 
-  if File.exist?(filepath)
-    load_file_content(filepath)
-  else
-    flash_message("#{filename} does not exist.")
-    redirect('/')
-  end
+  redirect_unless_file_exists(filename, filepath)
+  load_file_content(File.join(filepath, filename))
 end
 
 get '/files/upload' do

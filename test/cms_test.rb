@@ -155,9 +155,9 @@ class CmsTest < Minitest::Test
     get '/', {}, admin_session
     assert_equal 200, last_response.status
     assert_includes last_response.body, 'New Document'
-    assert_includes last_response.body, '/new'
+    assert_includes last_response.body, '/files/new'
 
-    get '/new'
+    get '/files/new'
     assert_equal 200, last_response.status
     assert_equal 'text/html;charset=utf-8', last_response['Content-Type']
     assert_includes last_response.body, 'form'

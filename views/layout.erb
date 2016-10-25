@@ -17,8 +17,8 @@
         <% if path != '/' %>
           <a class='documents' href='/'>All Documents</a>
         <% end %>
-        <% if path.casecmp('/new') != 0 %>
-          <a class='add' href='/new'>New Document</a>
+        <% if path.casecmp('/files/new') != 0 %>
+          <a class='add' href='/files/new'>New Document</a>
         <% end %>
         <% if path.casecmp('/files/upload') != 0 %>
           <a class='upload' href='/files/upload'>Upload</a>
