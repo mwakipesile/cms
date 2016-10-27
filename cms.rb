@@ -29,7 +29,7 @@ end
 
 def full_path(path)
   if ENV['RACK_ENV'] == 'test'
-    return File.expand_path("../test/#{path}", __FILE__)
+    File.expand_path("../test/#{path}", __FILE__)
   else
     File.expand_path("../#{path}", __FILE__)
   end
@@ -68,14 +68,14 @@ end
 before %r{/(\w.[^\/]+\.(?!.*\.)\w{2,})} do |filename|
   ext = File.extname(filename)
   @filename = filename
-  @dirpath = IMG_EXTNAMES.include?(ext) ? image_path : data_path 
+  @dirpath = IMG_EXTNAMES.include?(ext) ? image_path : data_path
   @filepath = File.join(@dirpath, @filename)
 
   redirect_unless_file_exists
 end
 
 before '/users/:action' do |action|
-  pass unless action.casecmp('signin') == 0 || action.casecmp('signup') == 0 
+  pass unless action.casecmp('signin').zero? || action.casecmp('signup').zero?
   redirect_logged_in_user
 end
 
@@ -114,23 +114,21 @@ helpers do
   end
 
   def invalid_username(username)
-    case
-    when username.size < 2
+    if username.size < 2
       flash_message('Username must be at least 2 characters long')
-    when username =~ /\W/
+    elsif username =~ /\W/
       flash_message('Username can contain alphanumeric only')
-    when @users[username]
+    elsif @users[username]
       flash_message('That username has already been taken')
     end
   end
 
   def invalid_password(password, password2)
-    case
-    when password.size < 4
+    if password.size < 4
       flash_message('Password must be at least 4 characters long')
-    when !password.match(/\w+/)
+    elsif !password.match(/\w+/)
       flash_message('Password must contain alphanumeric character')
-    when password != password2
+    elsif password != password2
       flash_message('Passwords don\'t match')
     end
   end
@@ -156,15 +154,14 @@ helpers do
   end
 
   def invalid_filename(filename)
-    case
-    when !filename.match(/\w+\.\w{2,}/)
+    if !filename.match(/\w+\.\w{2,}/)
       flash_message('A valid file name is required')
-    when !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
+    elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
       flash_message(
         "Unsupported extension. File must be one of the following types: \n" \
         "(#{VALID_FILE_EXTENSIONS.join(', ')})"
       )
-    when file_list.include?(filename)
+    elsif file_list.include?(filename)
       flash_message("A document with name #{filename} already exists")
     end
   end
@@ -287,7 +284,7 @@ post '/users/signup' do
   if invalid_username(username) || invalid_password(password, password2)
     halt erb(:signup)
   end
-    
+
   @users[username] = { 'password' => encrypt(password) }
   File.open(credentials_path, 'w') do |file|
     file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
