@@ -6,7 +6,7 @@
         <li>
           <a class='revisions' href='/<%= filename %>/revisions'>Revisions</a>
         </li>
-        <% if session[:username] %>
+        <% if signed_in? %>
           <li><a class='edit' href='/<%= filename %>/edit'>Edit</a></li>
           <li>
             <form action='files/delete/<%= filename %>' method='post' class='delete'>

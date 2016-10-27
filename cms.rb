@@ -9,6 +9,7 @@ require 'bcrypt'
 include FileUtils
 
 RESTRICTED = %w(new create delete duplicate edit signout upload).freeze
+FILE_ROUTES = %w(delete duplicate edit revisions).freeze
 VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf).freeze
 IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp).freeze
 
@@ -64,6 +65,20 @@ before do
   redirect_unauthorized_user
 end
 
+before %r{/(\w.[^\/]+\.(?!.*\.)\w{2,})} do |filename|
+  ext = File.extname(filename)
+  @filename = filename
+  @dirpath = IMG_EXTNAMES.include?(ext) ? image_path : data_path 
+  @filepath = File.join(@dirpath, @filename)
+
+  redirect_unless_file_exists(@filepath)
+end
+
+before '/users/:action' do |action|
+  pass unless action.casecmp('signin') == 0 || action.casecmp('signup') == 0 
+  redirect_logged_in_user
+end
+
 helpers do
   def file_list(directory = nil)
     abs_path = directory.nil? ? data_path : File.join(data_path, directory)
@@ -74,10 +89,9 @@ helpers do
     session[key] ||= message
   end
 
-  def redirect_unless_file_exists(filename, path = nil)
-    path ||= data_path
-    return if File.exist?(File.join(path, filename))
-    flash_message("#{filename} does not exist.")
+  def redirect_unless_file_exists(filepath)
+    return if File.exist?(filepath)
+    flash_message("#{File.basename(filepath)} does not exist.")
     redirect('/')
   end
 
@@ -100,21 +114,29 @@ helpers do
   end
 
   def invalid_username(username)
-    if username.size < 2
+    case
+    when username.size < 2
       flash_message('Username must be at least 2 characters long')
-    elsif username =~ /\W/
+    when username =~ /\W/
       flash_message('Username can contain alphanumeric only')
-    elsif @users[username]
+    when @users[username]
       flash_message('That username has already been taken')
     end
   end
 
-  def invalid_password(password)
-    if password.size < 4
+  def invalid_password(password, password2)
+    case
+    when password.size < 4
       flash_message('Password must be at least 4 characters long')
-    elsif !password.match(/\w+/)
+    when !password.match(/\w+/)
       flash_message('Password must contain alphanumeric character')
+    when password != password2
+      flash_message('Passwords don\'t match')
     end
+  end
+
+  def signed_in?
+    session[:username]
   end
 
   def restricted_route?
@@ -122,15 +144,33 @@ helpers do
   end
 
   def redirect_unauthorized_user
-    return if session[:username]
+    return if signed_in?
     session[:message] ||= 'You must be signed in to do that'
     redirect(request.referrer)
   end
 
   def redirect_logged_in_user
-    return unless session[:username]
+    return unless signed_in?
     flash_message('You are already logged in')
     redirect(request.referrer)
+  end
+
+  def file_route?
+    FILE_ROUTES.include?(request.path_info.split('/')[2])
+  end
+
+  def invalid_filename(filename)
+    case
+    when !filename.match(/\w+\.\w{2,}/)
+      flash_message('A valid file name is required')
+    when !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
+      flash_message(
+        "Unsupported extension. File must be one of the following types: \n" \
+        "(#{VALID_FILE_EXTENSIONS.join(', ')})"
+      )
+    when file_list.include?(filename)
+      flash_message("A document with name #{filename} already exists")
+    end
   end
 
   def create_duplicate_file_name(filename)
@@ -145,16 +185,15 @@ helpers do
     end
   end
 
-  def revisions_dir(filename)
-    filename.reverse.sub('.', '').reverse
+  def revisions_dir
+    @filename.reverse.sub('.', '').reverse
   end
 
-  def save_old_content(filename)
-    filepath = File.join(data_path, filename)
-    file_ext = File.extname(filename)
-    old_content = File.read(filepath)
+  def save_old_content
+    file_ext = File.extname(@filename)
+    old_content = File.read(@filepath)
 
-    dir = revisions_dir(filename)
+    dir = revisions_dir
     revisions_path = File.join(data_path, dir)
     Dir.mkdir revisions_path unless File.directory?(revisions_path)
 
@@ -185,147 +224,105 @@ end
 post '/files/create' do
   filename = params[:document_name]
 
-  if !filename.match(/\w+\.\w{2,}/)
-    flash_message('A valid file name is required')
-  elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
-    flash_message(
-      "Unsupported extension. File must be one of the following types: \n" \
-      "(#{VALID_FILE_EXTENSIONS.join(', ')})"
-    )
-  elsif file_list.include?(filename)
-    flash_message("A document with name #{filename} already exists")
-  else
-    create_document(filename)
-    flash_message("#{filename} was created")
-    redirect('/')
+  if invalid_filename(filename)
+    status(422)
+    halt erb(:new_file)
   end
-
-  status(422)
-  erb :new_file
+  
+  create_document(filename)
+  flash_message("#{filename} was created")
+  redirect('/')
 end
 
-get '/:filename/edit' do |filename|
-  redirect_unless_file_exists(filename)
-
-  @filename = filename
-  @file_content = File.read(File.join(data_path, filename))
+get '/:filename/edit' do
+  @file_content = File.read(@filepath)
   headers['Content-Type'] = 'text/html;charset=utf-8'
 
   erb :edit_file
 end
 
-post '/:filename/edit' do |filename|
-  redirect_unless_file_exists(filename)
-  save_old_content(filename)
-
+post '/:filename/edit' do
+  save_old_content
   edited_content = params[:file_content]
-  filepath = File.join(data_path, filename)
-  File.open(filepath, 'w') { |file| file.write(edited_content) }
+  File.open(@filepath, 'w') { |file| file.write(edited_content) }
 
-  flash_message("#{filename} has been updated!")
+  flash_message("#{@filename} has been updated!")
   redirect('/')
 end
 
-get '/:filename/revisions' do |filename|
-  redirect_unless_file_exists(filename)
-
-  dir = revisions_dir(filename)
-  @filename = filename
-  @revisions = file_list(dir).map { |file| File.basename(file, '.*') }
-
+get '/:filename/revisions' do
+  @revisions = file_list(revisions_dir).map { |f| File.basename(f, '.*') }
   erb :revisions
 end
 
 get '/:filename/revisions/:number' do |filename, number|
-  redirect_unless_file_exists(filename)
-
   revision_name = "#{number}#{File.extname(filename)}"
-  dir = revisions_dir(filename)
-
-  load_file_content(File.join(data_path, "#{dir}/#{revision_name}"))
+  load_file_content(File.join(data_path, "#{revisions_dir}/#{revision_name}"))
 end
 
-post '/files/delete/:filename' do |filename|
-  redirect_unless_file_exists(filename)
-
-  File.delete(File.join(data_path, filename))
-
-  revisions = File.join(data_path, filename.sub('.', ''))
+post '/files/delete/:filename' do
+  revisions = @filepath.reverse.sub('.', '').reverse
   FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
 
-  flash_message("#{filename} has been deleted")
+  File.delete(@filepath)
+  flash_message("#{@filename} has been deleted")
 
-  if env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
-    session.delete(:message)
-    status 204
-  else
-    redirect('/')
-  end
+  redirect('/') unless env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
+  session.delete(:message)
+  status 204
 end
 
-post '/files/duplicate/:filename' do |filename|
-  redirect_unless_file_exists(filename)
-
-  new_filename = create_duplicate_file_name(filename)
-  source_path = File.join(data_path, filename)
+post '/files/duplicate/:filename' do
+  new_filename = create_duplicate_file_name(@filename)
   destination_path = File.join(data_path, new_filename)
-  FileUtils.cp(source_path, destination_path)
+  FileUtils.cp(@filepath, destination_path)
 
   flash_message("#{new_filename} has been created")
-
   redirect('/')
 end
 
 get '/users/signup' do
-  redirect_logged_in_user
   erb :signup
 end
 
 post '/users/signup' do
-  redirect_logged_in_user
-
   username = params[:username]
   password = params[:password]
   password2 = params[:password2]
 
-  if invalid_username(username) || invalid_password(password)
-  elsif password != password2
-    flash_message('Passwords don\'t match')
-  else
-    @users[username] = { 'password' => encrypt(password) }
-    File.open(credentials_path, 'w') do |file|
-      file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
-    end
-
-    session[:username] = username
-    flash_message('Welcome!')
-    redirect('/')
+  if invalid_username(username) || invalid_password(password, password2)
+    halt erb(:signup)
+  end
+    
+  @users[username] = { 'password' => encrypt(password) }
+  File.open(credentials_path, 'w') do |file|
+    file.write(@users.to_yaml) # or file.puts(YAML.dump(@users))
   end
 
-  erb :signup
+  session[:username] = username
+  flash_message('Welcome!')
+  redirect('/')
 end
 
 get '/users/signin' do
-  redirect_logged_in_user
   erb :signin
 end
 
 post '/users/signin' do
-  redirect_logged_in_user
   username = params[:username]
   password = params[:password]
 
   user =   @users[username]
   session[:username] = username if user && check?(password, user['password'])
 
-  if session[:username]
+  if signed_in?
     flash_message('Welcome!')
     redirect('/')
-  else
-    status(422)
-    flash_message('Invalid credentials')
-    erb :signin
   end
+
+  status(422)
+  flash_message('Invalid credentials')
+  erb :signin
 end
 
 post '/users/signout' do
@@ -333,12 +330,8 @@ post '/users/signout' do
   redirect(request.referrer)
 end
 
-get %r{/(.+\.(?!.*\.)\w{2,})} do |filename|
-  ext = File.extname(filename)
-  filepath = IMG_EXTNAMES.include?(ext) ? 'public/uploads' : data_path 
-
-  redirect_unless_file_exists(filename, filepath)
-  load_file_content(File.join(filepath, filename))
+get %r{/(.+\.(?!.*\.)\w{2,})} do
+  load_file_content(@filepath)
 end
 
 get '/files/upload' do

@@ -24,7 +24,7 @@
           <a class='upload' href='/files/upload'>Upload</a>
         <% end %>
 
-        <% if session[:username] %>
+        <% if signed_in? %>
           <span>Signed in as <%= session[:username] %></span>
           <form action='/users/signout' method='post' class='signout'>
             <button type='submit'>Sign Out</button>

@@ -385,10 +385,10 @@ class CmsTest < Minitest::Test
 
   def test_image_upload
     post '/files/upload', {
-      files: [Rack::Test::UploadedFile.new('C:/Users/Edgar/Downloads/hustler-ruto-jet.png', 'image/jpeg')]
+      files: [Rack::Test::UploadedFile.new('public/uploads/default-logo.png', 'image/jpeg')]
       }, admin_session
 
     files = Dir[File.join(image_path, '*')].map { |path| File.basename(path) }
-    assert_includes files, 'hustler-ruto-jet.png'
+    assert_includes files, 'default-logo.png'
   end
 end
