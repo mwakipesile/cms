@@ -71,7 +71,7 @@ before %r{/(\w.[^\/]+\.(?!.*\.)\w{2,})} do |filename|
   @dirpath = IMG_EXTNAMES.include?(ext) ? image_path : data_path 
   @filepath = File.join(@dirpath, @filename)
 
-  redirect_unless_file_exists(@filepath)
+  redirect_unless_file_exists
 end
 
 before '/users/:action' do |action|
@@ -89,9 +89,9 @@ helpers do
     session[key] ||= message
   end
 
-  def redirect_unless_file_exists(filepath)
-    return if File.exist?(filepath)
-    flash_message("#{File.basename(filepath)} does not exist.")
+  def redirect_unless_file_exists
+    return if File.exist?(@filepath)
+    flash_message("#{File.basename(@filepath)} does not exist.")
     redirect('/')
   end
 
@@ -155,10 +155,6 @@ helpers do
     redirect(request.referrer)
   end
 
-  def file_route?
-    FILE_ROUTES.include?(request.path_info.split('/')[2])
-  end
-
   def invalid_filename(filename)
     case
     when !filename.match(/\w+\.\w{2,}/)
@@ -173,13 +169,13 @@ helpers do
     end
   end
 
-  def create_duplicate_file_name(filename)
+  def create_duplicate_file_name
     current_files = file_list
-    basename = File.basename(filename, filename.match(/\d*\.\w{2,}/).to_s)
-    copy_number = filename.match(/\d+(?!.*\d+)/).to_s.to_i + 1
+    basename = File.basename(@filename, @filename.match(/\d*\.\w{2,}/).to_s)
+    copy_number = @filename.match(/\d+(?!.*\d+)/).to_s.to_i + 1
 
     loop do
-      new_filename = "#{basename}#{copy_number}#{File.extname(filename)}"
+      new_filename = "#{basename}#{copy_number}#{File.extname(@filename)}"
       return new_filename unless current_files.include?(new_filename)
       copy_number += 1
     end
@@ -213,7 +209,6 @@ end
 
 get '/' do
   @filenames = file_list
-
   erb :index
 end
 
@@ -228,7 +223,7 @@ post '/files/create' do
     status(422)
     halt erb(:new_file)
   end
-  
+
   create_document(filename)
   flash_message("#{filename} was created")
   redirect('/')
@@ -237,7 +232,6 @@ end
 get '/:filename/edit' do
   @file_content = File.read(@filepath)
   headers['Content-Type'] = 'text/html;charset=utf-8'
-
   erb :edit_file
 end
 
@@ -273,7 +267,7 @@ post '/files/delete/:filename' do
 end
 
 post '/files/duplicate/:filename' do
-  new_filename = create_duplicate_file_name(@filename)
+  new_filename = create_duplicate_file_name
   destination_path = File.join(data_path, new_filename)
   FileUtils.cp(@filepath, destination_path)
 
@@ -312,7 +306,7 @@ post '/users/signin' do
   username = params[:username]
   password = params[:password]
 
-  user =   @users[username]
+  user = @users[username]
   session[:username] = username if user && check?(password, user['password'])
 
   if signed_in?
@@ -341,9 +335,7 @@ end
 post '/files/upload' do
   params[:files].each do |file|
     filename = params[file[:filename]] || file[:filename]
-    tmpfile = file[:tempfile]
-
-    FileUtils.cp(tmpfile.path, File.join(image_path, filename))
+    FileUtils.cp(file[:tempfile].path, File.join(image_path, filename))
   end
 
   redirect('/')
