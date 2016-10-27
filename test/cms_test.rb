@@ -173,7 +173,7 @@ class CmsTest < Minitest::Test
 
     get last_response['Location']
     assert_equal 200, last_response.status
-    assert_includes last_response.body, 'README.md was created'
+    assert_includes last_response.body, 'README.md has been created'
 
     get '/README.md'
     assert_equal 200, last_response.status
@@ -265,7 +265,7 @@ class CmsTest < Minitest::Test
   def test_successful_signup
     post '/users/signup', username: 'admin2', password: 'secret2', password2: 'secret2'
     assert_equal 302, last_response.status
-    assert_equal 'Welcome!', session[:message]
+    assert_equal 'Welcome admin2!', session[:message]
 
     get last_response['Location']
     assert_equal "admin2", session[:username]
@@ -309,7 +309,7 @@ class CmsTest < Minitest::Test
   def test_successful_signin
     post '/users/signin', username: 'admin', password: 'secret'
     assert_equal 302, last_response.status
-    assert_equal 'Welcome!', session[:message]
+    assert_equal 'Welcome admin!', session[:message]
 
     get last_response['Location']
     assert_equal 'admin', session[:username]

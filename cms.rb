@@ -9,9 +9,10 @@ require 'bcrypt'
 include FileUtils
 
 RESTRICTED = %w(new create delete duplicate edit signout upload).freeze
-FILE_ROUTES = %w(delete duplicate edit revisions).freeze
 VALID_FILE_EXTENSIONS = %w(.bmp .txt .md .doc .gif .jpg .jpeg .png .pdf).freeze
 IMG_EXTNAMES = %w(.jpg .jpeg .png .gif .bmp).freeze
+LANGUAGE = 'en'.freeze
+MESSAGES = YAML.load_file('cms_messages.yml')
 
 configure do
   enable :sessions
@@ -28,11 +29,8 @@ def check?(password, encrypted_password)
 end
 
 def full_path(path)
-  if ENV['RACK_ENV'] == 'test'
-    File.expand_path("../test/#{path}", __FILE__)
-  else
-    File.expand_path("../#{path}", __FILE__)
-  end
+  return File.expand_path("../#{path}", __FILE__) if ENV['RACK_ENV'] != 'test'
+  File.expand_path("../test/#{path}", __FILE__)
 end
 
 def data_path
@@ -85,13 +83,13 @@ helpers do
     Dir.glob(File.join(abs_path, '*.*')).map { |path| File.basename(path) }
   end
 
-  def flash_message(message, key = :message)
-    session[key] ||= message
+  def flash_message(message, var = nil, key = :message)
+    session[key] ||= "#{format(MESSAGES[LANGUAGE][message], var: var)}"
   end
 
   def redirect_unless_file_exists
     return if File.exist?(@filepath)
-    flash_message("#{File.basename(@filepath)} does not exist.")
+    flash_message('file_doesnt_exist', File.basename(@filepath))
     redirect('/')
   end
 
@@ -114,23 +112,15 @@ helpers do
   end
 
   def invalid_username(username)
-    if username.size < 2
-      flash_message('Username must be at least 2 characters long')
-    elsif username =~ /\W/
-      flash_message('Username can contain alphanumeric only')
-    elsif @users[username]
-      flash_message('That username has already been taken')
-    end
+    return flash_message('username_too_short') if username.size < 2
+    return flash_message('username_invalid_chars') if username =~ /\W/
+    return flash_message('username_taken') if @users[username]
   end
 
   def invalid_password(password, password2)
-    if password.size < 4
-      flash_message('Password must be at least 4 characters long')
-    elsif !password.match(/\w+/)
-      flash_message('Password must contain alphanumeric character')
-    elsif password != password2
-      flash_message('Passwords don\'t match')
-    end
+    return flash_message('password_too_short') if password.size < 4
+    return flash_message('password_invalid_chars') unless password.match(/\w+/)
+    return flash_message('passwords_dont_match') if password != password2
   end
 
   def signed_in?
@@ -149,21 +139,16 @@ helpers do
 
   def redirect_logged_in_user
     return unless signed_in?
-    flash_message('You are already logged in')
+    flash_message('already_signed_in')
     redirect(request.referrer)
   end
 
-  def invalid_filename(filename)
-    if !filename.match(/\w+\.\w{2,}/)
-      flash_message('A valid file name is required')
-    elsif !VALID_FILE_EXTENSIONS.include?(File.extname(filename))
-      flash_message(
-        "Unsupported extension. File must be one of the following types: \n" \
-        "(#{VALID_FILE_EXTENSIONS.join(', ')})"
-      )
-    elsif file_list.include?(filename)
-      flash_message("A document with name #{filename} already exists")
+  def invalid_filename(name)
+    return flash_message('filename_invalid') unless name.match(/\w+\.\w{2,}/)
+    unless VALID_FILE_EXTENSIONS.include?(File.extname(name))
+      return flash_message('invalid_extname', VALID_FILE_EXTENSIONS.join(', '))
     end
+    return flash_message('filename_taken', name) if file_list.include?(name)
   end
 
   def create_duplicate_file_name
@@ -222,7 +207,7 @@ post '/files/create' do
   end
 
   create_document(filename)
-  flash_message("#{filename} was created")
+  flash_message('file_new', filename)
   redirect('/')
 end
 
@@ -237,7 +222,7 @@ post '/:filename/edit' do
   edited_content = params[:file_content]
   File.open(@filepath, 'w') { |file| file.write(edited_content) }
 
-  flash_message("#{@filename} has been updated!")
+  flash_message('file_updated', @filename)
   redirect('/')
 end
 
@@ -256,7 +241,7 @@ post '/files/delete/:filename' do
   FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
 
   File.delete(@filepath)
-  flash_message("#{@filename} has been deleted")
+  flash_message('file_deleted', @filename)
 
   redirect('/') unless env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
   session.delete(:message)
@@ -268,7 +253,7 @@ post '/files/duplicate/:filename' do
   destination_path = File.join(data_path, new_filename)
   FileUtils.cp(@filepath, destination_path)
 
-  flash_message("#{new_filename} has been created")
+  flash_message('file_new', new_filename)
   redirect('/')
 end
 
@@ -291,7 +276,7 @@ post '/users/signup' do
   end
 
   session[:username] = username
-  flash_message('Welcome!')
+  flash_message('welcome', username)
   redirect('/')
 end
 
@@ -307,17 +292,17 @@ post '/users/signin' do
   session[:username] = username if user && check?(password, user['password'])
 
   if signed_in?
-    flash_message('Welcome!')
+    flash_message('welcome', username)
     redirect('/')
   end
 
   status(422)
-  flash_message('Invalid credentials')
+  flash_message('invalid_credentials')
   erb :signin
 end
 
 post '/users/signout' do
-  flash_message("Goodbye #{session.delete(:username)}")
+  flash_message('goodbye', session.delete(:username))
   redirect(request.referrer)
 end
 

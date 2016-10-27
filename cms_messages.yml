@@ -1,0 +1,22 @@
+# Twenty One messages yalm file
+en:
+  welcome: 'Welcome %{var}!'
+  goodbye: 'Goodbye %{var}'
+  file_doesnt_exist: '%{var} does not exist.'
+  username_too_short: 'Username must be at least 2 characters long'
+  username_invalid_chars: 'Username can contain alphanumeric only'
+  username_taken: 'That username has already been taken'
+  password_too_short: 'Password must be at least 4 characters long'
+  password_invalid_chars: 'Password must contain alphanumeric character'
+  passwords_dont_match: "Passwords don't match"
+  invalid_credentials: Invalid credentials
+  already_signed_in: 'You are already logged in'
+  invalid_extname: |+
+    Unsupported extension. File must be one of the following types: %{var}
+  filename_invalid: 'A valid file name is required'
+  filename_taken: 'A document with name %{var} already exists'
+  file_new: '%{var} has been created'
+  file_updated: '%{var} has been updated!'
+  file_deleted: '%{var} has been deleted'
+  restricted: 'You must be signed in to do that'
+  
