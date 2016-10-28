@@ -50,9 +50,7 @@ def load_user_credentials
 end
 
 def create_document(name, content = '')
-  File.open(File.join(data_path, name), 'w') do |file|
-    file.write(content)
-  end
+  File.open(File.join(data_path, name), 'w') { |file| file.write(content) }
 end
 
 before do
@@ -84,7 +82,7 @@ helpers do
   end
 
   def flash_message(message, var = nil, key = :message)
-    session[key] ||= "#{format(MESSAGES[LANGUAGE][message], var: var)}"
+    session[key] ||= format(MESSAGES[LANGUAGE][message], var: var).to_s
   end
 
   def redirect_unless_file_exists
@@ -122,7 +120,7 @@ helpers do
 
   def invalid_password(password, password2)
     return flash_message('password_too_short') if password.size < 4
-    return flash_message('password_invalid_chars') unless password.match(/\w+/)
+    return flash_message('password_invalid_chars') unless password =~ /\w+/
     return flash_message('passwords_dont_match') if password != password2
   end
 
@@ -143,7 +141,7 @@ helpers do
   end
 
   def invalid_filename(name)
-    return flash_message('filename_invalid') unless name.match(/\w+\.\w{2,}/)
+    return flash_message('filename_invalid') unless name =~ /\w+\.\w{2,}/
     unless VALID_FILE_EXTENSIONS.include?(File.extname(name))
       return flash_message('invalid_extname', VALID_FILE_EXTENSIONS.join(', '))
     end
