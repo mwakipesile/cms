@@ -89,13 +89,16 @@ helpers do
 
   def redirect_unless_file_exists
     return if File.exist?(@filepath)
-    flash_message('file_doesnt_exist', File.basename(@filepath))
-    redirect('/')
+    redirect_with_message('/', 'file_doesnt_exist', File.basename(@filepath))
+  end
+
+  def redirect_with_message(route, *message)
+    flash_message(*message)
+    redirect(route)
   end
 
   def render_markdown(text)
-    markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
-    markdown.render(text)
+    Redcarpet::Markdown.new(Redcarpet::Render::HTML).render(text)
   end
 
   def load_file_content(path)
@@ -132,15 +135,11 @@ helpers do
   end
 
   def redirect_unauthorized_user
-    return if signed_in?
-    session[:message] ||= 'You must be signed in to do that'
-    redirect(request.referrer)
+    redirect_with_message(request.referrer, 'restricted') unless signed_in?
   end
 
   def redirect_logged_in_user
-    return unless signed_in?
-    flash_message('already_signed_in')
-    redirect(request.referrer)
+    redirect_with_message(request.referrer, 'already_signed_in') if signed_in?
   end
 
   def invalid_filename(name)
@@ -194,9 +193,7 @@ get '/' do
   erb :index
 end
 
-get '/files/new' do
-  erb :new_file
-end
+get('/files/new') { erb :new_file }
 
 post '/files/create' do
   filename = params[:document_name]
@@ -207,8 +204,7 @@ post '/files/create' do
   end
 
   create_document(filename)
-  flash_message('file_new', filename)
-  redirect('/')
+  redirect_with_message('/', 'file_new', filename)
 end
 
 get '/:filename/edit' do
@@ -222,8 +218,7 @@ post '/:filename/edit' do
   edited_content = params[:file_content]
   File.open(@filepath, 'w') { |file| file.write(edited_content) }
 
-  flash_message('file_updated', @filename)
-  redirect('/')
+  redirect_with_message('/', 'file_updated', @filename)
 end
 
 get '/:filename/revisions' do
@@ -241,11 +236,9 @@ post '/files/delete/:filename' do
   FileUtils.rm_rf(revisions, secure: true) if File.directory?(revisions)
 
   File.delete(@filepath)
-  flash_message('file_deleted', @filename)
 
-  redirect('/') unless env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
-  session.delete(:message)
-  status 204
+  halt(204) if env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
+  redirect_with_message('/', 'file_deleted', @filename)
 end
 
 post '/files/duplicate/:filename' do
@@ -253,13 +246,10 @@ post '/files/duplicate/:filename' do
   destination_path = File.join(data_path, new_filename)
   FileUtils.cp(@filepath, destination_path)
 
-  flash_message('file_new', new_filename)
-  redirect('/')
+  redirect_with_message('/', 'file_new', new_filename)
 end
 
-get '/users/signup' do
-  erb :signup
-end
+get('/users/signup') { erb :signup }
 
 post '/users/signup' do
   username = params[:username]
@@ -276,13 +266,10 @@ post '/users/signup' do
   end
 
   session[:username] = username
-  flash_message('welcome', username)
-  redirect('/')
+  redirect_with_message('/', 'welcome', username)
 end
 
-get '/users/signin' do
-  erb :signin
-end
+get('/users/signin') { erb :signin }
 
 post '/users/signin' do
   username = params[:username]
@@ -290,11 +277,7 @@ post '/users/signin' do
 
   user = @users[username]
   session[:username] = username if user && check?(password, user['password'])
-
-  if signed_in?
-    flash_message('welcome', username)
-    redirect('/')
-  end
+  redirect_with_message('/', 'welcome', username) if signed_in?
 
   status(422)
   flash_message('invalid_credentials')
@@ -302,17 +285,12 @@ post '/users/signin' do
 end
 
 post '/users/signout' do
-  flash_message('goodbye', session.delete(:username))
-  redirect(request.referrer)
+  redirect_with_message(request.referrer, 'goodbye', session.delete(:username))
 end
 
-get %r{/(.+\.(?!.*\.)\w{2,})} do
-  load_file_content(@filepath)
-end
+get(%r{/(.+\.(?!.*\.)\w{2,})}) { load_file_content(@filepath) }
 
-get '/files/upload' do
-  erb :upload
-end
+get('/files/upload') { erb :upload }
 
 post '/files/upload' do
   params[:files].each do |file|
